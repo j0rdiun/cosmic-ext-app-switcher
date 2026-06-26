@@ -12,11 +12,11 @@ use crate::app::{AppSwitcher, Message};
 use crate::icons::icon_name_for;
 
 // macOS CMD+Tab palette — always dark regardless of system theme
-const BG:            Color = Color { r: 0.13, g: 0.13, b: 0.13, a: 0.92 };
-const SELECTED_BG:   Color = Color { r: 1.0,  g: 1.0,  b: 1.0,  a: 0.18 };
-const SELECTED_RING: Color = Color { r: 1.0,  g: 1.0,  b: 1.0,  a: 0.55 };
-const ICON_SIZE:     u16 = 60;
-const ICON_SELECTED: u16 = 64;
+const BG:          Color = Color { r: 0.13, g: 0.13, b: 0.13, a: 0.92 };
+const SELECTED_BG: Color = Color { r: 1.0,  g: 1.0,  b: 1.0,  a: 0.25 };
+
+const ICON_SIZE: u16 = 60;
+const CELL_PAD:  u16 = 10;
 
 pub fn view(state: &AppSwitcher) -> Element<Message> {
     let cells: Vec<Element<Message>> = state.toplevels
@@ -39,18 +39,15 @@ pub fn view(state: &AppSwitcher) -> Element<Message> {
 
 fn build_cell<'a>(index: usize, app_id: &str, selected: bool) -> Element<'a, Message> {
     let icon_name = icon_name_for(app_id);
-    let size = if selected { ICON_SELECTED } else { ICON_SIZE };
 
     let app_icon: Element<Message> = icon::from_name(icon_name.as_str())
-        .size(size)
+        .size(ICON_SIZE)
         .icon()
-        .size(size)
+        .size(ICON_SIZE)
         .into();
 
-    let cell_inner: Element<Message> = app_icon;
-
-    let cell = container(cell_inner)
-        .padding(10)
+    let cell = container(app_icon)
+        .padding(CELL_PAD)
         .style(if selected { selected_style } else { transparent_style });
 
     mouse_area(cell)
@@ -80,9 +77,9 @@ fn selected_style(_theme: &cosmic::Theme) -> ContainerStyle {
     ContainerStyle {
         background: Some(Background::Color(SELECTED_BG)),
         border: Border {
-            radius: 10.0.into(),
-            width: 1.0,
-            color: SELECTED_RING,
+            radius: 12.0.into(),
+            width: 0.0,
+            color: Color::TRANSPARENT,
         },
         ..Default::default()
     }

@@ -61,9 +61,9 @@ impl Application for AppSwitcher {
             1.min(n.saturating_sub(1))
         };
 
-        // Each cell: icon(64) + padding(20) = 84px wide, 4px gap, strip padding + margin
+        // Each cell: icon(60) + padding(20) = 80px wide, 4px gap, strip padding(36) + margin(40)
         let n = toplevels.len() as u32;
-        let surface_w = n * 84 + (n.saturating_sub(1)) * 4 + 36 + 40;
+        let surface_w = n * 80 + (n.saturating_sub(1)) * 4 + 36 + 40;
         let surface_h = 160u32;
 
         let surface_id = WindowId::unique();
