@@ -9,31 +9,19 @@ permissions:
   contents: write
 
 jobs:
-  build:
-    name: Build ${{ matrix.target }}
+  build-x86_64:
+    name: Build x86_64
     runs-on: ubuntu-22.04
-    strategy:
-      matrix:
-        target:
-          - x86_64-unknown-linux-gnu
-          - aarch64-unknown-linux-gnu
-
     steps:
       - uses: actions/checkout@v4
 
       - name: Install system dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y \
-            libxkbcommon-dev \
-            libwayland-dev \
-            pkg-config \
-            gcc-aarch64-linux-gnu
+          sudo apt-get install -y libxkbcommon-dev libwayland-dev pkg-config
 
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
-        with:
-          targets: ${{ matrix.target }}
 
       - name: Cache Cargo registry
         uses: actions/cache@v4
@@ -41,35 +29,53 @@ jobs:
           path: |
             ~/.cargo/registry
             ~/.cargo/git
-          key: ${{ runner.os }}-cargo-${{ matrix.target }}-${{ hashFiles('Cargo.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-cargo-${{ matrix.target }}-
-
-      - name: Configure cross-compilation (aarch64)
-        if: matrix.target == 'aarch64-unknown-linux-gnu'
-        run: |
-          echo '[target.aarch64-unknown-linux-gnu]' >> ~/.cargo/config.toml
-          echo 'linker = "aarch64-linux-gnu-gcc"' >> ~/.cargo/config.toml
-          echo 'PKG_CONFIG_SYSROOT_DIR=/usr/aarch64-linux-gnu' >> $GITHUB_ENV
-          sudo apt-get install -y libxkbcommon-dev:arm64 libwayland-dev:arm64 || true
+          key: ${{ runner.os }}-cargo-x86_64-${{ hashFiles('Cargo.lock') }}
+          restore-keys: ${{ runner.os }}-cargo-x86_64-
 
       - name: Build
-        run: cargo build --release --target ${{ matrix.target }}
-
-      - name: Rename binary
-        run: |
-          cp target/${{ matrix.target }}/release/cosmic-app-switcher \
-             cosmic-app-switcher-${{ matrix.target }}
+        run: cargo build --release
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: cosmic-app-switcher-${{ matrix.target }}
-          path: cosmic-app-switcher-${{ matrix.target }}
+          name: cosmic-app-switcher-x86_64-unknown-linux-gnu
+          path: target/release/cosmic-app-switcher
+
+  build-aarch64:
+    name: Build aarch64
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-unknown-linux-gnu
+
+      - name: Cache Cargo registry
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+          key: ${{ runner.os }}-cargo-aarch64-${{ hashFiles('Cargo.lock') }}
+          restore-keys: ${{ runner.os }}-cargo-aarch64-
+
+      - name: Install cross
+        run: cargo install cross --git https://github.com/cross-rs/cross
+
+      - name: Build
+        run: cross build --release --target aarch64-unknown-linux-gnu
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: cosmic-app-switcher-aarch64-unknown-linux-gnu
+          path: target/aarch64-unknown-linux-gnu/release/cosmic-app-switcher
 
   release:
     name: Create Release
-    needs: build
+    needs: [build-x86_64, build-aarch64]
     runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v4
@@ -80,10 +86,27 @@ jobs:
           path: artifacts
           merge-multiple: true
 
+      - name: Rename binaries with arch suffix
+        run: |
+          mv artifacts/cosmic-app-switcher artifacts/cosmic-app-switcher-x86_64-unknown-linux-gnu || true
+          ls artifacts/
+
+      - name: Download aarch64 artifact separately
+        uses: actions/download-artifact@v4
+        with:
+          name: cosmic-app-switcher-aarch64-unknown-linux-gnu
+          path: artifacts/aarch64
+
+      - name: Prepare release assets
+        run: |
+          mv artifacts/aarch64/cosmic-app-switcher artifacts/cosmic-app-switcher-aarch64-unknown-linux-gnu
+          chmod +x artifacts/cosmic-app-switcher-*
+          ls -lh artifacts/
+
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          files: artifacts/*
+          files: artifacts/cosmic-app-switcher-*
           generate_release_notes: true
           body: |
             ## Install
