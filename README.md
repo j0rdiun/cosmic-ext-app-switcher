@@ -2,7 +2,7 @@
 
 A macOS-style horizontal app switcher for the [COSMIC desktop](https://system76.com/cosmic) on Pop!_OS — replacing the default vertical Super+Tab list with a compact icon strip centered on screen.
 
-![Switcher strip showing open app icons with the selected app highlighted]()
+![cosmic-app-switcher in action](docs/app-switcher.gif)
 
 ---
 
