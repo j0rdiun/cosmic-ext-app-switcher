@@ -43,14 +43,17 @@ jobs:
 
   build-aarch64:
     name: Build aarch64
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04-arm
     steps:
       - uses: actions/checkout@v4
 
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libxkbcommon-dev libwayland-dev pkg-config
+
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
-        with:
-          targets: aarch64-unknown-linux-gnu
 
       - name: Cache Cargo registry
         uses: actions/cache@v4
@@ -61,17 +64,14 @@ jobs:
           key: ${{ runner.os }}-cargo-aarch64-${{ hashFiles('Cargo.lock') }}
           restore-keys: ${{ runner.os }}-cargo-aarch64-
 
-      - name: Install cross
-        run: cargo install cross --git https://github.com/cross-rs/cross
-
       - name: Build
-        run: cross build --release --target aarch64-unknown-linux-gnu
+        run: cargo build --release
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: cosmic-app-switcher-aarch64-unknown-linux-gnu
-          path: target/aarch64-unknown-linux-gnu/release/cosmic-app-switcher
+          path: target/release/cosmic-app-switcher
 
   release:
     name: Create Release
