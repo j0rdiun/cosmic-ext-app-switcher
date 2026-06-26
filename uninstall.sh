@@ -2,7 +2,7 @@
 set -euo pipefail
 
 # cosmic-app-switcher — standalone uninstaller
-# Usage: curl -fsSL https://raw.githubusercontent.com/OWNER/cosmic-app-switcher/main/uninstall.sh | bash
+# Usage: curl -fsSL https://raw.githubusercontent.com/j0rdiun/cosmic-app-switcher/main/uninstall.sh | bash
 
 INSTALL_DIR="$HOME/.local/bin"
 BINARY="cosmic-app-switcher"

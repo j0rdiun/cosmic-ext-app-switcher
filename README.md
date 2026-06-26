@@ -28,7 +28,7 @@ A macOS-style horizontal app switcher for the [COSMIC desktop](https://system76.
 **One-line (no Rust required):**
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/OWNER/cosmic-app-switcher/main/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/j0rdiun/cosmic-app-switcher/main/install.sh | bash
 ```
 
 **Or build from source:**
@@ -38,7 +38,7 @@ curl -fsSL https://raw.githubusercontent.com/OWNER/cosmic-app-switcher/main/inst
 sudo apt install libxkbcommon-dev
 curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y && source ~/.cargo/env
 
-git clone https://github.com/OWNER/cosmic-app-switcher
+git clone https://github.com/j0rdiun/cosmic-app-switcher
 cd cosmic-app-switcher
 make install
 ```
@@ -50,7 +50,7 @@ Changes take effect immediately — no logout required.
 ## Uninstall
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/OWNER/cosmic-app-switcher/main/uninstall.sh | bash
+curl -fsSL https://raw.githubusercontent.com/j0rdiun/cosmic-app-switcher/main/uninstall.sh | bash
 ```
 
 Or from the project directory:

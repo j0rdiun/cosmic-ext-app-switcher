@@ -3,9 +3,9 @@ set -euo pipefail
 
 # cosmic-app-switcher — standalone installer
 # Downloads a pre-built binary from GitHub Releases (no Rust required).
-# Usage: curl -fsSL https://raw.githubusercontent.com/OWNER/cosmic-app-switcher/main/install.sh | bash
+# Usage: curl -fsSL https://raw.githubusercontent.com/j0rdiun/cosmic-app-switcher/main/install.sh | bash
 
-REPO="OWNER/cosmic-app-switcher"  # TODO: update with your GitHub username
+REPO="j0rdiun/cosmic-app-switcher"
 INSTALL_DIR="$HOME/.local/bin"
 BINARY="cosmic-app-switcher"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
