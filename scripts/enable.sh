@@ -3,19 +3,31 @@ set -euo pipefail
 
 BINARY="$HOME/.local/bin/cosmic-app-switcher"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-DEFAULT_CONFIG="$HOME/.config/cosmic/com.system76.CosmicSettings.Shortcuts/v1/system_actions"
 
-CONFIG=$("$SCRIPT_DIR/find-config.sh" 2>/dev/null) || CONFIG=""
+set +e
+CONFIG=$("$SCRIPT_DIR/find-config.sh")
+rc=$?
+set -e
+
+case "$rc" in
+    0) ;;
+    2)
+        if [ ! -f "$BINARY" ]; then
+            echo "Error: binary not found at $BINARY — run 'make install' first to deploy the binary." >&2
+            exit 1
+        fi
+        mkdir -p "$(dirname "$CONFIG")"
+        printf '{\n    WindowSwitcher: "%s",\n    WindowSwitcherPrevious: "%s --reverse",\n}\n' "$BINARY" "$BINARY" > "$CONFIG"
+        echo "Created $CONFIG and enabled. cosmic-comp will reload shortcuts automatically."
+        exit 0
+        ;;
+    *)
+        exit "$rc"
+        ;;
+esac
 
 if [ ! -f "$BINARY" ]; then
     echo "Warning: binary not found at $BINARY — run 'make install' first to deploy the binary."
-fi
-
-if [ -z "$CONFIG" ]; then
-    mkdir -p "$(dirname "$DEFAULT_CONFIG")"
-    printf '{\n    WindowSwitcher: "%s",\n    WindowSwitcherPrevious: "%s --reverse",\n}\n' "$BINARY" "$BINARY" > "$DEFAULT_CONFIG"
-    echo "Created $DEFAULT_CONFIG and enabled. cosmic-comp will reload shortcuts automatically."
-    exit 0
 fi
 
 if grep -q "cosmic-app-switcher" "$CONFIG"; then
