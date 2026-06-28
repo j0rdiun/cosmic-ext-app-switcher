@@ -15,17 +15,26 @@ else
 fi
 
 # Shortcuts config
-CONFIG=$("$SCRIPT_DIR/find-config.sh" 2>/dev/null) || CONFIG=""
-if [ -z "$CONFIG" ]; then
-    echo "Config:    COSMIC shortcuts config not found"
-else
-    echo "Config:    $CONFIG"
-    if grep -q "cosmic-app-switcher" "$CONFIG" 2>/dev/null; then
-        echo "Shortcuts: enabled"
-    else
-        echo "Shortcuts: disabled"
-    fi
-fi
+set +e
+CONFIG=$("$SCRIPT_DIR/find-config.sh" 2>/dev/null)
+rc=$?
+set -e
+case "$rc" in
+    0)
+        echo "Config:    $CONFIG"
+        if grep -q "cosmic-app-switcher" "$CONFIG" 2>/dev/null; then
+            echo "Shortcuts: enabled"
+        else
+            echo "Shortcuts: disabled"
+        fi
+        ;;
+    2)
+        echo "Config:    none yet (run 'make enable' to create it)"
+        ;;
+    *)
+        echo "Config:    COSMIC shortcuts config not found (is COSMIC installed?)"
+        ;;
+esac
 
 # Build
 if [ -f "$(dirname "$SCRIPT_DIR")/target/release/cosmic-app-switcher" ]; then

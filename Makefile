@@ -40,7 +40,11 @@ reinstall: uninstall install
 # Check that the COSMIC environment is compatible with this tool
 check-compat:
 	@echo "Checking compatibility..."
-	@bash scripts/find-config.sh > /dev/null && echo "  COSMIC shortcuts config: found" || echo "  COSMIC shortcuts config: NOT found"
+	@bash scripts/find-config.sh > /dev/null 2>&1; case $$? in \
+		0) echo "  COSMIC shortcuts config: found" ;; \
+		2) echo "  COSMIC shortcuts config: not created yet (run 'make enable')" ;; \
+		*) echo "  COSMIC shortcuts config: NOT found" ;; \
+	esac
 	@test -f $(INSTALL_DIR)/$(BINARY) && echo "  Binary: installed" || echo "  Binary: not installed"
 	@command -v cosmic-comp >/dev/null 2>&1 && echo "  cosmic-comp: found" || echo "  cosmic-comp: not found (is COSMIC running?)"
 	@echo "Done."

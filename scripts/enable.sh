@@ -3,15 +3,36 @@ set -euo pipefail
 
 BINARY="$HOME/.local/bin/cosmic-app-switcher"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-CONFIG=$("$SCRIPT_DIR/find-config.sh") || exit 1
+
+set +e
+CONFIG=$("$SCRIPT_DIR/find-config.sh")
+rc=$?
+set -e
+
+case "$rc" in
+    0) ;;
+    2)
+        if [ ! -f "$BINARY" ]; then
+            echo "Error: binary not found at $BINARY — run 'make install' first to deploy the binary." >&2
+            exit 1
+        fi
+        mkdir -p "$(dirname "$CONFIG")"
+        printf '{\n    WindowSwitcher: "%s",\n    WindowSwitcherPrevious: "%s --reverse",\n}\n' "$BINARY" "$BINARY" > "$CONFIG"
+        echo "Created $CONFIG and enabled. cosmic-comp will reload shortcuts automatically."
+        exit 0
+        ;;
+    *)
+        exit "$rc"
+        ;;
+esac
+
+if [ ! -f "$BINARY" ]; then
+    echo "Warning: binary not found at $BINARY — run 'make install' first to deploy the binary."
+fi
 
 if grep -q "cosmic-app-switcher" "$CONFIG"; then
     echo "Already enabled."
     exit 0
-fi
-
-if [ ! -f "$BINARY" ]; then
-    echo "Warning: binary not found at $BINARY — run 'make install' first to deploy the binary."
 fi
 
 TMPFILE=$(mktemp)

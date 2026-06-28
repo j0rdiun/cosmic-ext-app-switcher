@@ -35,11 +35,14 @@ jobs:
       - name: Build
         run: cargo build --release
 
+      - name: Rename binary with arch suffix
+        run: mv target/release/cosmic-app-switcher target/release/cosmic-app-switcher-x86_64-unknown-linux-gnu
+
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: cosmic-app-switcher-x86_64-unknown-linux-gnu
-          path: target/release/cosmic-app-switcher
+          path: target/release/cosmic-app-switcher-x86_64-unknown-linux-gnu
 
   build-aarch64:
     name: Build aarch64
@@ -67,11 +70,14 @@ jobs:
       - name: Build
         run: cargo build --release
 
+      - name: Rename binary with arch suffix
+        run: mv target/release/cosmic-app-switcher target/release/cosmic-app-switcher-aarch64-unknown-linux-gnu
+
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: cosmic-app-switcher-aarch64-unknown-linux-gnu
-          path: target/release/cosmic-app-switcher
+          path: target/release/cosmic-app-switcher-aarch64-unknown-linux-gnu
 
   release:
     name: Create Release
@@ -86,21 +92,10 @@ jobs:
           path: artifacts
           merge-multiple: true
 
-      - name: Rename binaries with arch suffix
-        run: |
-          mv artifacts/cosmic-app-switcher artifacts/cosmic-app-switcher-x86_64-unknown-linux-gnu || true
-          ls artifacts/
-
-      - name: Download aarch64 artifact separately
-        uses: actions/download-artifact@v4
-        with:
-          name: cosmic-app-switcher-aarch64-unknown-linux-gnu
-          path: artifacts/aarch64
-
       - name: Prepare release assets
         run: |
-          mv artifacts/aarch64/cosmic-app-switcher artifacts/cosmic-app-switcher-aarch64-unknown-linux-gnu
           chmod +x artifacts/cosmic-app-switcher-*
+          file artifacts/cosmic-app-switcher-*
           ls -lh artifacts/
 
       - name: Create GitHub Release
