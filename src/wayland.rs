@@ -78,7 +78,7 @@ fn wayland_thread_main(
     data.toplevels.sort_by_key(|t| if t.is_active { 0usize } else { 1 });
 
     let entries: Vec<ToplevelEntry> = data.toplevels.iter().enumerate()
-        .filter(|(_, t)| !t.app_id.is_empty())
+        .filter(|(_, t)| !t.app_id.is_empty() || !t.title.is_empty())
         .map(|(i, t)| ToplevelEntry {
             app_id:     t.app_id.clone(),
             title:      t.title.clone(),
