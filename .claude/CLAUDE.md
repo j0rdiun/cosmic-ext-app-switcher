@@ -1,4 +1,4 @@
-# cosmic-app-switcher
+# cosmic-ext-app-switcher
 
 macOS-style horizontal Super+Tab app switcher for COSMIC desktop on Pop!_OS.
 
@@ -24,7 +24,7 @@ make install                 # builds + installs to ~/.local/bin/ + enables shor
 
 **Two-process design**: cosmic-comp launches a fresh binary on every Super+Tab keypress.
 
-- First invocation: binds Unix socket at `/tmp/cosmic-app-switcher.sock`, shows layer-shell overlay
+- First invocation: binds Unix socket at `/tmp/cosmic-ext-app-switcher.sock`, shows layer-shell overlay
 - Subsequent Tab presses (Super still held): new binary connects to socket, sends `"next"`/`"prev"`, exits
 - Running instance receives message via iced Subscription, updates selection, re-renders
 - Super release → `ModifiersChanged(logo=false)` → activate selected window
