@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-BINARY="$HOME/.local/bin/cosmic-app-switcher"
+BINARY="$HOME/.local/bin/cosmic-ext-app-switcher"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-echo "cosmic-app-switcher status"
+echo "cosmic-ext-app-switcher status"
 echo "──────────────────────────"
 
 # Binary
@@ -22,7 +22,7 @@ set -e
 case "$rc" in
     0)
         echo "Config:    $CONFIG"
-        if grep -q "cosmic-app-switcher" "$CONFIG" 2>/dev/null; then
+        if grep -q "cosmic-ext-app-switcher" "$CONFIG" 2>/dev/null; then
             echo "Shortcuts: enabled"
         else
             echo "Shortcuts: disabled"
@@ -37,7 +37,7 @@ case "$rc" in
 esac
 
 # Build
-if [ -f "$(dirname "$SCRIPT_DIR")/target/release/cosmic-app-switcher" ]; then
+if [ -f "$(dirname "$SCRIPT_DIR")/target/release/cosmic-ext-app-switcher" ]; then
     echo "Build:     present (target/release/)"
 else
     echo "Build:     not built (run 'make build')"

@@ -42,7 +42,7 @@ impl Application for AppSwitcher {
     type Flags    = (Vec<ToplevelEntry>, bool, mpsc::SyncSender<ActivateCommand>);
     type Message  = Message;
 
-    const APP_ID: &'static str = "io.github.cosmic-app-switcher";
+    const APP_ID: &'static str = "io.github.cosmic-ext-app-switcher";
 
     fn core(&self) -> &Core {
         &self.core

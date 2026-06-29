@@ -8,10 +8,10 @@ use clap::Parser;
 use std::io::Write;
 use std::os::unix::net::UnixStream;
 
-const SOCKET: &str = "/tmp/cosmic-app-switcher.sock";
+const SOCKET: &str = "/tmp/cosmic-ext-app-switcher.sock";
 
 #[derive(Parser, Debug)]
-#[command(name = "cosmic-app-switcher")]
+#[command(name = "cosmic-ext-app-switcher")]
 pub struct Args {
     #[arg(long, default_value_t = false)]
     pub reverse: bool,

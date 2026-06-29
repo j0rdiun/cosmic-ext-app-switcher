@@ -1,10 +1,10 @@
 [package]
-name = "cosmic-app-switcher"
+name = "cosmic-ext-app-switcher"
 version = "0.1.0"
 edition = "2024"
 
 [[bin]]
-name = "cosmic-app-switcher"
+name = "cosmic-ext-app-switcher"
 path = "src/main.rs"
 
 [dependencies]

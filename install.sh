@@ -1,13 +1,13 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# cosmic-app-switcher — standalone installer
+# cosmic-ext-app-switcher — standalone installer
 # Downloads a pre-built binary from GitHub Releases (no Rust required).
-# Usage: curl -fsSL https://raw.githubusercontent.com/j0rdiun/cosmic-app-switcher/main/install.sh | bash
+# Usage: curl -fsSL https://raw.githubusercontent.com/j0rdiun/cosmic-ext-app-switcher/main/install.sh | bash
 
-REPO="j0rdiun/cosmic-app-switcher"
+REPO="j0rdiun/cosmic-ext-app-switcher"
 INSTALL_DIR="$HOME/.local/bin"
-BINARY="cosmic-app-switcher"
+BINARY="cosmic-ext-app-switcher"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]:-}")" && pwd)" || SCRIPT_DIR=""
 
 # ── Detect architecture ───────────────────────────────────────────────────────
@@ -28,6 +28,19 @@ if [ ! -d "$SHORTCUTS_DIR" ]; then
     echo "Error: COSMIC desktop shortcuts directory not found." >&2
     echo "Make sure COSMIC desktop is installed and has been launched at least once." >&2
     exit 1
+fi
+
+# ── Migrate from old binary name ─────────────────────────────────────────────
+OLD_BINARY="cosmic-app-switcher"
+if [ -f "$INSTALL_DIR/$OLD_BINARY" ]; then
+    echo "Migrating from $OLD_BINARY to $BINARY..."
+    rm -f "$INSTALL_DIR/$OLD_BINARY"
+    MIGCONF=$(find "$SHORTCUTS_DIR" -name "system_actions" 2>/dev/null | sort -V | tail -1 || true)
+    if [ -n "$MIGCONF" ] && grep -q "$OLD_BINARY" "$MIGCONF" 2>/dev/null; then
+        MFTMP=$(mktemp)
+        grep -v "$OLD_BINARY" "$MIGCONF" > "$MFTMP"
+        mv "$MFTMP" "$MIGCONF"
+    fi
 fi
 
 # ── Fetch latest release ──────────────────────────────────────────────────────
@@ -79,7 +92,7 @@ else
         echo "Run 'make enable' from the project directory to register manually." >&2
         exit 0
     fi
-    if grep -q "cosmic-app-switcher" "$CONFIG"; then
+    if grep -q "cosmic-ext-app-switcher" "$CONFIG"; then
         echo "Shortcut already registered."
     else
         TMPCONF=$(mktemp)
@@ -92,4 +105,4 @@ fi
 
 echo ""
 echo "Done! Press Super+Tab or Alt+Tab to try it."
-echo "To uninstall: bash <(curl -fsSL https://raw.githubusercontent.com/$REPO/main/uninstall.sh)"
+echo "To uninstall: bash <(curl -fsSL https://raw.githubusercontent.com/j0rdiun/cosmic-ext-app-switcher/main/uninstall.sh)"

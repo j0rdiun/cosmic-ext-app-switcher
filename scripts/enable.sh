@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-BINARY="$HOME/.local/bin/cosmic-app-switcher"
+BINARY="$HOME/.local/bin/cosmic-ext-app-switcher"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 set +e
@@ -26,7 +26,7 @@ case "$rc" in
         ;;
 esac
 
-if grep -q "cosmic-app-switcher" "$CONFIG"; then
+if grep -q "cosmic-ext-app-switcher" "$CONFIG"; then
     echo "Already enabled."
     exit 0
 fi

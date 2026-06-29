@@ -1,4 +1,4 @@
-BINARY      := cosmic-app-switcher
+BINARY      := cosmic-ext-app-switcher
 INSTALL_DIR := $(HOME)/.local/bin
 TARGET      := target/release/$(BINARY)
 
