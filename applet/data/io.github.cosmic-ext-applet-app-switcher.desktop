@@ -1,0 +1,11 @@
+[Desktop Entry]
+Name=App Switcher Settings
+Comment=Set the visual theme for cosmic-ext-app-switcher
+Type=Application
+Exec=cosmic-ext-applet-app-switcher
+Icon=preferences-desktop-theme-symbolic
+Terminal=false
+NoDisplay=true
+X-CosmicApplet=true
+Categories=COSMIC;
+Keywords=COSMIC;Applet;AppSwitcher;Theme;

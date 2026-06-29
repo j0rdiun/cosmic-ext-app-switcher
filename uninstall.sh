@@ -5,7 +5,9 @@ set -euo pipefail
 # Usage: curl -fsSL https://raw.githubusercontent.com/j0rdiun/cosmic-ext-app-switcher/main/uninstall.sh | bash
 
 INSTALL_DIR="$HOME/.local/bin"
+APPS_DIR="$HOME/.local/share/applications"
 BINARY="cosmic-ext-app-switcher"
+APPLET="cosmic-ext-applet-app-switcher"
 OLD_BINARY="cosmic-app-switcher"
 SHORTCUTS_DIR="$HOME/.config/cosmic/com.system76.CosmicSettings.Shortcuts"
 
@@ -36,11 +38,16 @@ else
     echo "Shortcut not registered — nothing to remove."
 fi
 
-# ── Remove binary ─────────────────────────────────────────────────────────────
+# ── Remove binaries ───────────────────────────────────────────────────────────
 REMOVED=0
 if [ -f "$INSTALL_DIR/$BINARY" ]; then
     rm -f "$INSTALL_DIR/$BINARY"
     echo "Binary removed: $INSTALL_DIR/$BINARY"
+    REMOVED=1
+fi
+if [ -f "$INSTALL_DIR/$APPLET" ]; then
+    rm -f "$INSTALL_DIR/$APPLET"
+    echo "Binary removed: $INSTALL_DIR/$APPLET"
     REMOVED=1
 fi
 if [ -f "$INSTALL_DIR/$OLD_BINARY" ]; then
@@ -50,6 +57,13 @@ if [ -f "$INSTALL_DIR/$OLD_BINARY" ]; then
 fi
 if [ "$REMOVED" -eq 0 ]; then
     echo "Binary not found — nothing to remove."
+fi
+
+# ── Remove applet desktop file ────────────────────────────────────────────────
+DESKTOP="$APPS_DIR/io.github.cosmic-ext-applet-app-switcher.desktop"
+if [ -f "$DESKTOP" ]; then
+    rm -f "$DESKTOP"
+    echo "Desktop file removed: $DESKTOP"
 fi
 
 echo ""

@@ -16,15 +16,17 @@ use cosmic::{
     Element,
 };
 use crate::wayland::{ActivateCommand, ToplevelEntry};
+use switcher_config::{Theme, ThemeValues};
 
 pub struct AppSwitcher {
-    core:           Core,
-    pub toplevels:  Vec<ToplevelEntry>,
-    pub selected:   usize,
-    cmd_tx:         mpsc::SyncSender<ActivateCommand>,
-    super_held:     bool,
-    alt_held:       bool,
-    surface_id:     WindowId,
+    core:          Core,
+    pub toplevels: Vec<ToplevelEntry>,
+    pub selected:  usize,
+    cmd_tx:        mpsc::SyncSender<ActivateCommand>,
+    super_held:    bool,
+    alt_held:      bool,
+    surface_id:    WindowId,
+    pub theme:     ThemeValues,
 }
 
 #[derive(Debug, Clone)]
@@ -39,21 +41,16 @@ pub enum Message {
 
 impl Application for AppSwitcher {
     type Executor = cosmic::executor::Default;
-    type Flags    = (Vec<ToplevelEntry>, bool, mpsc::SyncSender<ActivateCommand>);
+    type Flags    = (Vec<ToplevelEntry>, bool, mpsc::SyncSender<ActivateCommand>, Theme);
     type Message  = Message;
 
     const APP_ID: &'static str = "io.github.cosmic-ext-app-switcher";
 
-    fn core(&self) -> &Core {
-        &self.core
-    }
-
-    fn core_mut(&mut self) -> &mut Core {
-        &mut self.core
-    }
+    fn core(&self) -> &Core { &self.core }
+    fn core_mut(&mut self) -> &mut Core { &mut self.core }
 
     fn init(core: Core, flags: Self::Flags) -> (Self, Task<Message>) {
-        let (toplevels, reverse, cmd_tx) = flags;
+        let (toplevels, reverse, cmd_tx, theme_preset) = flags;
         let n = toplevels.len();
         let selected = if reverse {
             n.saturating_sub(1)
@@ -61,9 +58,10 @@ impl Application for AppSwitcher {
             1.min(n.saturating_sub(1))
         };
 
-        // Each cell: icon(60) + padding(20) = 80px wide, 4px gap, strip padding(36) + margin(40)
-        let n = toplevels.len() as u32;
-        let surface_w = n * 80 + (n.saturating_sub(1)) * 4 + 36 + 40;
+        let theme = theme_preset.values();
+        let n32 = toplevels.len() as u32;
+        let cell_w = (theme.icon_size as u32) + 20; // icon + 2 × cell-pad(10)
+        let surface_w = n32 * cell_w + (n32.saturating_sub(1)) * 4 + 36 + 40;
         let surface_h = 160u32;
 
         let surface_id = WindowId::unique();
@@ -77,7 +75,7 @@ impl Application for AppSwitcher {
         });
 
         (
-            AppSwitcher { core, toplevels, selected, cmd_tx, super_held: false, alt_held: false, surface_id },
+            AppSwitcher { core, toplevels, selected, cmd_tx, super_held: false, alt_held: false, surface_id, theme },
             layer_task,
         )
     }
@@ -182,12 +180,10 @@ impl Application for AppSwitcher {
         Subscription::batch([key_sub, socket_sub])
     }
 
-    // Called for the main window (unused with no_main_window, but required by trait)
     fn view(&self) -> Element<'_, Message> {
         crate::ui::view(self)
     }
 
-    // Called for our layer-shell surface
     fn view_window(&self, _id: WindowId) -> Element<'_, Message> {
         crate::ui::view(self)
     }
@@ -197,9 +193,9 @@ pub fn run(
     toplevels: Vec<ToplevelEntry>,
     reverse: bool,
     cmd_tx: mpsc::SyncSender<ActivateCommand>,
+    theme: Theme,
 ) -> Result<()> {
     let settings = Settings::default().no_main_window(true);
-
-    cosmic::app::run::<AppSwitcher>(settings, (toplevels, reverse, cmd_tx))
+    cosmic::app::run::<AppSwitcher>(settings, (toplevels, reverse, cmd_tx, theme))
         .map_err(|e| anyhow::anyhow!("{e:?}"))
 }

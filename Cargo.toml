@@ -1,3 +1,7 @@
+[workspace]
+members = [".", "applet", "config"]
+resolver = "2"
+
 [package]
 name = "cosmic-ext-app-switcher"
 version = "0.1.0"
@@ -18,6 +22,7 @@ cosmic-protocols = { git = "https://github.com/pop-os/cosmic-protocols", default
     "client",
 ], rev = "d0e95be" }
 freedesktop-desktop-entry = "0.5"
+switcher-config = { path = "config" }
 
 wayland-client = "0.31"
 

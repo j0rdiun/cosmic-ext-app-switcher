@@ -1,6 +1,10 @@
-BINARY      := cosmic-ext-app-switcher
+SWITCHER    := cosmic-ext-app-switcher
+APPLET      := cosmic-ext-applet-app-switcher
 INSTALL_DIR := $(HOME)/.local/bin
-TARGET      := target/release/$(BINARY)
+APPS_DIR    := $(HOME)/.local/share/applications
+SWITCHER_BIN := target/release/$(SWITCHER)
+APPLET_BIN  := target/release/$(APPLET)
+DESKTOP     := applet/data/io.github.cosmic-ext-applet-app-switcher.desktop
 
 .PHONY: all build install uninstall enable disable status reinstall check-compat
 
@@ -15,15 +19,20 @@ build:
 	cargo build --release
 
 install: build
-	@mkdir -p $(INSTALL_DIR)
-	install -Dm755 $(TARGET) $(INSTALL_DIR)/$(BINARY)
+	@mkdir -p $(INSTALL_DIR) $(APPS_DIR)
+	install -Dm755 $(SWITCHER_BIN) $(INSTALL_DIR)/$(SWITCHER)
+	install -Dm755 $(APPLET_BIN) $(INSTALL_DIR)/$(APPLET)
+	install -Dm644 $(DESKTOP) $(APPS_DIR)/io.github.cosmic-ext-applet-app-switcher.desktop
 	@$(MAKE) enable
 	@echo ""
 	@echo "Installed and enabled. Press Super+Tab or Alt+Tab to try it."
+	@echo "Add the 'App Switcher Settings' applet to your COSMIC panel to change themes."
 
 uninstall:
 	@$(MAKE) disable
-	@rm -f $(INSTALL_DIR)/$(BINARY)
+	@rm -f $(INSTALL_DIR)/$(SWITCHER)
+	@rm -f $(INSTALL_DIR)/$(APPLET)
+	@rm -f $(APPS_DIR)/io.github.cosmic-ext-applet-app-switcher.desktop
 	@echo "Uninstalled. COSMIC default switcher restored."
 
 enable:
@@ -37,7 +46,6 @@ status:
 
 reinstall: uninstall install
 
-# Check that the COSMIC environment is compatible with this tool
 check-compat:
 	@echo "Checking compatibility..."
 	@bash scripts/find-config.sh > /dev/null 2>&1; case $$? in \
@@ -45,6 +53,7 @@ check-compat:
 		2) echo "  COSMIC shortcuts config: not created yet (run 'make enable')" ;; \
 		*) echo "  COSMIC shortcuts config: NOT found" ;; \
 	esac
-	@test -f $(INSTALL_DIR)/$(BINARY) && echo "  Binary: installed" || echo "  Binary: not installed"
+	@test -f $(INSTALL_DIR)/$(SWITCHER) && echo "  Switcher binary: installed" || echo "  Switcher binary: not installed"
+	@test -f $(INSTALL_DIR)/$(APPLET)   && echo "  Applet binary:   installed" || echo "  Applet binary:   not installed"
 	@command -v cosmic-comp >/dev/null 2>&1 && echo "  cosmic-comp: found" || echo "  cosmic-comp: not found (is COSMIC running?)"
 	@echo "Done."

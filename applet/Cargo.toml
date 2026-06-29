@@ -1,0 +1,15 @@
+[package]
+name = "cosmic-ext-applet-app-switcher"
+version = "0.1.0"
+edition = "2024"
+
+[[bin]]
+name = "cosmic-ext-applet-app-switcher"
+path = "src/main.rs"
+
+[dependencies]
+libcosmic = { git = "https://github.com/pop-os/libcosmic", rev = "417923f", default-features = false, features = [
+    "applet",
+    "tokio",
+] }
+switcher-config = { path = "../config" }

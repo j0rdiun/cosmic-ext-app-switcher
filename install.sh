@@ -2,12 +2,15 @@
 set -euo pipefail
 
 # cosmic-ext-app-switcher — standalone installer
-# Downloads a pre-built binary from GitHub Releases (no Rust required).
+# Downloads pre-built binaries from GitHub Releases (no Rust required).
 # Usage: curl -fsSL https://raw.githubusercontent.com/j0rdiun/cosmic-ext-app-switcher/main/install.sh | bash
 
 REPO="j0rdiun/cosmic-ext-app-switcher"
 INSTALL_DIR="$HOME/.local/bin"
+APPS_DIR="$HOME/.local/share/applications"
 BINARY="cosmic-ext-app-switcher"
+APPLET="cosmic-ext-applet-app-switcher"
+APPLET_DESKTOP_ID="io.github.cosmic-ext-applet-app-switcher"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]:-}")" && pwd)" || SCRIPT_DIR=""
 
 # ── Detect architecture ───────────────────────────────────────────────────────
@@ -43,46 +46,75 @@ if [ -f "$INSTALL_DIR/$OLD_BINARY" ]; then
     fi
 fi
 
-# ── Fetch latest release ──────────────────────────────────────────────────────
+# ── Fetch latest release asset URLs ──────────────────────────────────────────
 echo "Fetching latest release..."
 if command -v curl &>/dev/null; then
-    DOWNLOAD_URL=$(curl -fsSL "https://api.github.com/repos/$REPO/releases/latest" \
-        | grep "browser_download_url" \
-        | grep "$ARCH_TAG" \
-        | cut -d '"' -f 4)
+    RELEASE_JSON=$(curl -fsSL "https://api.github.com/repos/$REPO/releases/latest")
 elif command -v wget &>/dev/null; then
-    DOWNLOAD_URL=$(wget -qO- "https://api.github.com/repos/$REPO/releases/latest" \
-        | grep "browser_download_url" \
-        | grep "$ARCH_TAG" \
-        | cut -d '"' -f 4)
+    RELEASE_JSON=$(wget -qO- "https://api.github.com/repos/$REPO/releases/latest")
 else
     echo "Error: curl or wget is required." >&2
     exit 1
 fi
 
-if [ -z "$DOWNLOAD_URL" ]; then
-    echo "Error: could not find a release binary for $ARCH_TAG." >&2
+get_url() {
+    echo "$RELEASE_JSON" | grep "browser_download_url" | grep "$1" | grep "$ARCH_TAG" | cut -d '"' -f 4
+}
+
+SWITCHER_URL=$(get_url "$BINARY")
+APPLET_URL=$(get_url "$APPLET")
+
+if [ -z "$SWITCHER_URL" ]; then
+    echo "Error: could not find switcher binary for $ARCH_TAG." >&2
     echo "Build from source: https://github.com/$REPO" >&2
     exit 1
 fi
 
-# ── Download and install ──────────────────────────────────────────────────────
-mkdir -p "$INSTALL_DIR"
+# ── Download and install switcher ─────────────────────────────────────────────
+mkdir -p "$INSTALL_DIR" "$APPS_DIR"
 TMPFILE=$(mktemp)
 trap 'rm -f "$TMPFILE"' EXIT
 
 echo "Downloading $BINARY ($ARCH_TAG)..."
 if command -v curl &>/dev/null; then
-    curl -fsSL "$DOWNLOAD_URL" -o "$TMPFILE"
+    curl -fsSL "$SWITCHER_URL" -o "$TMPFILE"
 else
-    wget -qO "$TMPFILE" "$DOWNLOAD_URL"
+    wget -qO "$TMPFILE" "$SWITCHER_URL"
 fi
-
 install -m755 "$TMPFILE" "$INSTALL_DIR/$BINARY"
 echo "Installed: $INSTALL_DIR/$BINARY"
 
+# ── Download and install applet ───────────────────────────────────────────────
+if [ -n "$APPLET_URL" ]; then
+    echo "Downloading $APPLET ($ARCH_TAG)..."
+    if command -v curl &>/dev/null; then
+        curl -fsSL "$APPLET_URL" -o "$TMPFILE"
+    else
+        wget -qO "$TMPFILE" "$APPLET_URL"
+    fi
+    install -m755 "$TMPFILE" "$INSTALL_DIR/$APPLET"
+    echo "Installed: $INSTALL_DIR/$APPLET"
+
+    # Install .desktop file so COSMIC panel can discover the applet
+    cat > "$APPS_DIR/$APPLET_DESKTOP_ID.desktop" <<'DESKTOP'
+[Desktop Entry]
+Name=App Switcher Settings
+Comment=Set the visual theme for cosmic-ext-app-switcher
+Type=Application
+Exec=cosmic-ext-applet-app-switcher
+Icon=preferences-desktop-theme-symbolic
+Terminal=false
+NoDisplay=true
+X-CosmicApplet=true
+Categories=COSMIC;
+Keywords=COSMIC;Applet;AppSwitcher;Theme;
+DESKTOP
+    echo "Installed: $APPS_DIR/$APPLET_DESKTOP_ID.desktop"
+else
+    echo "Warning: applet binary not found in release — skipping applet install." >&2
+fi
+
 # ── Register shortcut ─────────────────────────────────────────────────────────
-# Use bundled scripts if running from repo, otherwise inline the logic
 if [ -f "$SCRIPT_DIR/scripts/enable.sh" ]; then
     bash "$SCRIPT_DIR/scripts/enable.sh"
 else
@@ -105,4 +137,5 @@ fi
 
 echo ""
 echo "Done! Press Super+Tab or Alt+Tab to try it."
+echo "Add the 'App Switcher Settings' applet to your COSMIC panel to change themes."
 echo "To uninstall: bash <(curl -fsSL https://raw.githubusercontent.com/j0rdiun/cosmic-ext-app-switcher/main/uninstall.sh)"

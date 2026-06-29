@@ -7,6 +7,8 @@ use anyhow::Result;
 use clap::Parser;
 use std::io::Write;
 use std::os::unix::net::UnixStream;
+use cosmic::cosmic_config::ConfigGet;
+use switcher_config::{Theme, APP_ID, CONFIG_VERSION};
 
 const SOCKET: &str = "/tmp/cosmic-ext-app-switcher.sock";
 
@@ -15,6 +17,14 @@ const SOCKET: &str = "/tmp/cosmic-ext-app-switcher.sock";
 pub struct Args {
     #[arg(long, default_value_t = false)]
     pub reverse: bool,
+}
+
+fn load_theme() -> Theme {
+    use cosmic::cosmic_config::Config;
+    Config::new(APP_ID, CONFIG_VERSION)
+        .ok()
+        .and_then(|c| c.get::<Theme>("theme").ok())
+        .unwrap_or_default()
 }
 
 fn main() -> Result<()> {
@@ -31,10 +41,11 @@ fn main() -> Result<()> {
     // We are the first instance. Clean up any stale socket from a crash.
     let _ = std::fs::remove_file(SOCKET);
 
+    let theme = load_theme();
     let (toplevels, cmd_tx) = wayland::spawn_wayland_thread()?;
     if toplevels.is_empty() {
         return Ok(());
     }
 
-    app::run(toplevels, args.reverse, cmd_tx)
+    app::run(toplevels, args.reverse, cmd_tx, theme)
 }
