@@ -16,7 +16,7 @@ build:
 		echo "  curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh"; \
 		exit 1; \
 	}
-	cargo build --release
+	cargo build --release --workspace
 
 install: build
 	@mkdir -p $(INSTALL_DIR) $(APPS_DIR)

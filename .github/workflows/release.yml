@@ -33,7 +33,7 @@ jobs:
           restore-keys: ${{ runner.os }}-cargo-x86_64-
 
       - name: Build
-        run: cargo build --release
+        run: cargo build --release --workspace
 
       - name: Rename binaries with arch suffix
         run: |
@@ -72,7 +72,7 @@ jobs:
           restore-keys: ${{ runner.os }}-cargo-aarch64-
 
       - name: Build
-        run: cargo build --release
+        run: cargo build --release --workspace
 
       - name: Rename binaries with arch suffix
         run: |
