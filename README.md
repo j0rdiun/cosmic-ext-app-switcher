@@ -4,6 +4,8 @@ A macOS-style horizontal app switcher for the [COSMIC desktop](https://system76.
 
 ![cosmic-ext-app-switcher in action](docs/app-switcher.gif)
 
+![Panel applet — theme picker and shortcut toggle](docs/screenshot-applet.png)
+
 ---
 
 ## Install
@@ -57,7 +59,15 @@ make uninstall
 
 ---
 
+## Panel applet
+
+Add the **App Switcher Settings** applet to your COSMIC panel for quick access to:
+- **Super+Tab shortcut** toggle — enable or disable without touching the terminal
+- **Theme picker** — Dark, Light, Frosted, or Midnight
+
 ## Enable / Disable
+
+Via the panel applet toggle, or from the terminal:
 
 ```bash
 make enable         # register as COSMIC window switcher (live reload)
@@ -126,4 +136,4 @@ Building from source additionally requires `libxkbcommon-dev` and Rust.
 
 ## License
 
-MIT
+GPL-3.0-only — see [LICENSE](LICENSE)

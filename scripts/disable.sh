@@ -20,13 +20,13 @@ case "$rc" in
         ;;
 esac
 
-if ! grep -q "cosmic-ext-app-switcher" "$CONFIG"; then
+if ! grep -qE "WindowSwitcher:|WindowSwitcherPrevious:" "$CONFIG"; then
     echo "Already disabled."
     exit 0
 fi
 
 TMPFILE=$(mktemp)
-grep -v "cosmic-ext-app-switcher" "$CONFIG" > "$TMPFILE"
+grep -vE "^\s*(WindowSwitcher|WindowSwitcherPrevious):" "$CONFIG" > "$TMPFILE"
 mv "$TMPFILE" "$CONFIG"
 
 echo "Disabled. COSMIC default switcher restored."
