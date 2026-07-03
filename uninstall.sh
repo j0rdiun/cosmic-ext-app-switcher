@@ -66,5 +66,13 @@ if [ -f "$DESKTOP" ]; then
     echo "Desktop file removed: $DESKTOP"
 fi
 
+# ── Remove applet icon ────────────────────────────────────────────────────────
+ICON="$HOME/.local/share/icons/hicolor/scalable/apps/io.github.cosmic-ext-applet-app-switcher-symbolic.svg"
+if [ -f "$ICON" ]; then
+    rm -f "$ICON"
+    echo "Icon removed: $ICON"
+    gtk-update-icon-cache -f -t "$HOME/.local/share/icons/hicolor/" 2>/dev/null || true
+fi
+
 echo ""
 echo "Uninstall complete."

@@ -103,12 +103,13 @@ jobs:
       - name: Prepare release assets
         run: |
           chmod +x artifacts/cosmic-ext-*
+          cp applet/data/io.github.cosmic-ext-applet-app-switcher-symbolic.svg artifacts/
           ls -lh artifacts/
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          files: artifacts/cosmic-ext-*
+          files: artifacts/*
           generate_release_notes: true
           body: |
             ## Install
