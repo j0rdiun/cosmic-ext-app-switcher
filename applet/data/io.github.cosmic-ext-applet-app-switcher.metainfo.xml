@@ -35,7 +35,7 @@
     </screenshot>
   </screenshots>
   <releases>
-    <release version="0.1.0" date="2026-07-01">
+    <release version="0.1.3" date="2026-07-03">
       <description>
         <p>Initial release — Super+Tab overlay switcher with Dark, Light, Frosted, and Midnight themes.</p>
       </description>
