@@ -4,7 +4,7 @@
   <metadata_license>CC0-1.0</metadata_license>
   <project_license>GPL-3.0-only</project_license>
   <project_group>COSMIC</project_group>
-  <developer_name>Jordan</developer_name>
+  <developer_name>j0rdiun</developer_name>
   <name>App Switcher</name>
   <summary>macOS-style Super+Tab app switcher for COSMIC</summary>
   <url type="homepage">https://github.com/j0rdiun/cosmic-ext-app-switcher</url>
