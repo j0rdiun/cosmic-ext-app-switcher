@@ -150,8 +150,9 @@ else
         echo "Shortcut already registered."
     else
         TMPCONF=$(mktemp)
-        sed "s|}|    WindowSwitcher: \"$INSTALL_DIR/$BINARY\",\n    WindowSwitcherPrevious: \"$INSTALL_DIR/$BINARY --reverse\",\n}|" \
-            "$CONFIG" > "$TMPCONF"
+        grep -vE "^\s*(WindowSwitcher|WindowSwitcherPrevious):" "$CONFIG" | head -n -1 > "$TMPCONF"
+        printf '    WindowSwitcher: "%s",\n    WindowSwitcherPrevious: "%s --reverse",\n}\n' \
+            "$INSTALL_DIR/$BINARY" "$INSTALL_DIR/$BINARY" >> "$TMPCONF"
         mv "$TMPCONF" "$CONFIG"
         echo "Shortcut registered."
     fi

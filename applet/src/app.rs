@@ -57,7 +57,14 @@ fn shortcuts_config_path() -> Option<std::path::PathBuf> {
             .filter(|e| e.path().is_dir() && e.file_name().to_string_lossy().starts_with('v'))
             .map(|e| e.path())
             .collect();
-        version_dirs.sort();
+        version_dirs.sort_by_key(|p| {
+            p.file_name()
+                .and_then(|n| {
+                    let s = n.to_string_lossy();
+                    s.strip_prefix('v').and_then(|v| v.parse::<u32>().ok())
+                })
+                .unwrap_or(0)
+        });
 
         for dir in version_dirs.iter().rev() {
             let p = dir.join("system_actions");
@@ -123,8 +130,18 @@ fn do_register_shortcut() -> Result<(), String> {
         if existing.contains("cosmic-ext-app-switcher") {
             return Ok(());
         }
-        let last_brace = existing.rfind('}').unwrap_or(existing.len());
-        let before = existing[..last_brace].trim_end();
+        // Strip any existing WindowSwitcher bindings before adding ours —
+        // appending without removing would create duplicate RON keys.
+        let cleaned: String = existing
+            .lines()
+            .filter(|l| {
+                let t = l.trim();
+                !t.starts_with("WindowSwitcher:") && !t.starts_with("WindowSwitcherPrevious:")
+            })
+            .flat_map(|l| [l, "\n"])
+            .collect();
+        let last_brace = cleaned.rfind('}').unwrap_or(cleaned.len());
+        let before = cleaned[..last_brace].trim_end();
         format!(
             "{before}\n    WindowSwitcher: \"{cmd}\",\n    WindowSwitcherPrevious: \"{cmd} --reverse\",\n}}\n"
         )

@@ -36,7 +36,11 @@ if [ ! -f "$BINARY" ]; then
 fi
 
 TMPFILE=$(mktemp)
-sed "s|}|    WindowSwitcher: \"$BINARY\",\n    WindowSwitcherPrevious: \"$BINARY --reverse\",\n}|" "$CONFIG" > "$TMPFILE"
+# Strip any existing WindowSwitcher bindings (avoids duplicate RON keys if another
+# switcher was registered), remove the closing brace, then append our entries.
+grep -vE "^\s*(WindowSwitcher|WindowSwitcherPrevious):" "$CONFIG" | head -n -1 > "$TMPFILE"
+printf '    WindowSwitcher: "%s",\n    WindowSwitcherPrevious: "%s --reverse",\n}\n' \
+    "$BINARY" "$BINARY" >> "$TMPFILE"
 mv "$TMPFILE" "$CONFIG"
 
 echo "Enabled. cosmic-comp will reload shortcuts automatically."

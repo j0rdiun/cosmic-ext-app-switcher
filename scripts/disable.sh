@@ -20,7 +20,7 @@ case "$rc" in
         ;;
 esac
 
-if ! grep -qE "WindowSwitcher:|WindowSwitcherPrevious:" "$CONFIG"; then
+if ! grep -qE "^\s*(WindowSwitcher|WindowSwitcherPrevious):" "$CONFIG"; then
     echo "Already disabled."
     exit 0
 fi
