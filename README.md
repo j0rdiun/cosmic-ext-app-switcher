@@ -61,6 +61,8 @@ make uninstall
 
 ## Panel applet
 
+> **Tip:** After installing, right-click your COSMIC panel → **Edit Panel** → **Add Applet** → search for **App Switcher Settings** and add it. This gives you a one-click toggle and theme picker directly in your panel.
+
 Add the **App Switcher Settings** applet to your COSMIC panel for quick access to:
 - **Super+Tab shortcut** toggle — enable or disable without touching the terminal
 - **Theme picker** — Dark, Light, Frosted, or Midnight
