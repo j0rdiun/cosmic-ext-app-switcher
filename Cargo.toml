@@ -20,7 +20,7 @@ libcosmic = { git = "https://github.com/pop-os/libcosmic", rev = "417923f", defa
 ] }
 cosmic-protocols = { git = "https://github.com/pop-os/cosmic-protocols", default-features = false, features = [
     "client",
-], rev = "d0e95be" }
+], rev = "c253ec1" }
 freedesktop-desktop-entry = "0.5"
 switcher-config = { path = "config" }
 
