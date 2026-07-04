@@ -8,9 +8,11 @@ set -euo pipefail
 REPO="j0rdiun/cosmic-ext-app-switcher"
 INSTALL_DIR="$HOME/.local/bin"
 APPS_DIR="$HOME/.local/share/applications"
+ICONS_DIR="$HOME/.local/share/icons/hicolor/scalable/apps"
 BINARY="cosmic-ext-app-switcher"
 APPLET="cosmic-ext-applet-app-switcher"
 APPLET_DESKTOP_ID="io.github.cosmic-ext-applet-app-switcher"
+SVG_NAME="io.github.cosmic-ext-applet-app-switcher-symbolic.svg"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]:-}")" && pwd)" || SCRIPT_DIR=""
 
 # ── Detect architecture ───────────────────────────────────────────────────────
@@ -61,8 +63,13 @@ get_url() {
     echo "$RELEASE_JSON" | grep "browser_download_url" | grep "$1" | grep "$ARCH_TAG" | cut -d '"' -f 4
 }
 
+get_asset_url() {
+    echo "$RELEASE_JSON" | grep "browser_download_url" | grep "$1" | cut -d '"' -f 4
+}
+
 SWITCHER_URL=$(get_url "$BINARY")
 APPLET_URL=$(get_url "$APPLET")
+SVG_URL=$(get_asset_url "$SVG_NAME")
 
 if [ -z "$SWITCHER_URL" ]; then
     echo "Error: could not find switcher binary for $ARCH_TAG." >&2
@@ -102,7 +109,7 @@ Name=App Switcher Settings
 Comment=Set the visual theme for cosmic-ext-app-switcher
 Type=Application
 Exec=cosmic-ext-applet-app-switcher
-Icon=preferences-desktop-theme-symbolic
+Icon=io.github.cosmic-ext-applet-app-switcher-symbolic
 Terminal=false
 NoDisplay=true
 X-CosmicApplet=true
@@ -112,6 +119,21 @@ DESKTOP
     echo "Installed: $APPS_DIR/$APPLET_DESKTOP_ID.desktop"
 else
     echo "Warning: applet binary not found in release — skipping applet install." >&2
+fi
+
+# ── Download and install applet icon ─────────────────────────────────────────
+if [ -n "$SVG_URL" ]; then
+    mkdir -p "$ICONS_DIR"
+    echo "Downloading $SVG_NAME..."
+    if command -v curl &>/dev/null; then
+        curl -fsSL "$SVG_URL" -o "$ICONS_DIR/$SVG_NAME"
+    else
+        wget -qO "$ICONS_DIR/$SVG_NAME" "$SVG_URL"
+    fi
+    echo "Installed: $ICONS_DIR/$SVG_NAME"
+    gtk-update-icon-cache -f -t "$HOME/.local/share/icons/hicolor/" 2>/dev/null || true
+else
+    echo "Warning: icon SVG not found in release — skipping icon install." >&2
 fi
 
 # ── Register shortcut ─────────────────────────────────────────────────────────
@@ -128,8 +150,9 @@ else
         echo "Shortcut already registered."
     else
         TMPCONF=$(mktemp)
-        sed "s|}|    WindowSwitcher: \"$INSTALL_DIR/$BINARY\",\n    WindowSwitcherPrevious: \"$INSTALL_DIR/$BINARY --reverse\",\n}|" \
-            "$CONFIG" > "$TMPCONF"
+        grep -vE "^\s*(WindowSwitcher|WindowSwitcherPrevious):" "$CONFIG" | head -n -1 > "$TMPCONF"
+        printf '    WindowSwitcher: "%s",\n    WindowSwitcherPrevious: "%s --reverse",\n}\n' \
+            "$INSTALL_DIR/$BINARY" "$INSTALL_DIR/$BINARY" >> "$TMPCONF"
         mv "$TMPCONF" "$CONFIG"
         echo "Shortcut registered."
     fi

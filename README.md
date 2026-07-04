@@ -2,7 +2,16 @@
 
 A macOS-style horizontal app switcher for the [COSMIC desktop](https://system76.com/cosmic) on Pop!_OS — replacing the default vertical Super+Tab list with a compact icon strip centered on screen.
 
-![cosmic-ext-app-switcher in action](docs/app-switcher.gif)
+<table align="center">
+  <tr>
+    <td align="center"><img src="docs/app-switcher.gif" alt="App switcher overlay"/></td>
+    <td align="center"><img src="docs/screenshot-applet.png" alt="Panel applet"/></td>
+  </tr>
+  <tr>
+    <td align="center"><em>Super+Tab switcher overlay</em></td>
+    <td align="center"><em>Panel applet — theme &amp; shortcut toggle</em></td>
+  </tr>
+</table>
 
 ---
 
@@ -57,7 +66,17 @@ make uninstall
 
 ---
 
+## Panel applet
+
+> **Tip:** After installing, right-click your COSMIC panel → **Edit Panel** → **Add Applet** → search for **App Switcher Settings** and add it. This gives you a one-click toggle and theme picker directly in your panel.
+
+Add the **App Switcher Settings** applet to your COSMIC panel for quick access to:
+- **Super+Tab shortcut** toggle — enable or disable without touching the terminal
+- **Theme picker** — Dark, Light, Frosted, or Midnight
+
 ## Enable / Disable
+
+Via the panel applet toggle, or from the terminal:
 
 ```bash
 make enable         # register as COSMIC window switcher (live reload)
@@ -126,4 +145,4 @@ Building from source additionally requires `libxkbcommon-dev` and Rust.
 
 ## License
 
-MIT
+GPL-3.0-only — see [LICENSE](LICENSE)

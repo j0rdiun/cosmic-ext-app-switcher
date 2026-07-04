@@ -10,7 +10,10 @@ use std::os::unix::net::UnixStream;
 use cosmic::cosmic_config::ConfigGet;
 use switcher_config::{Theme, APP_ID, CONFIG_VERSION};
 
-const SOCKET: &str = "/tmp/cosmic-ext-app-switcher.sock";
+pub fn socket_path() -> std::path::PathBuf {
+    let dir = std::env::var("XDG_RUNTIME_DIR").unwrap_or_else(|_| "/tmp".to_string());
+    std::path::PathBuf::from(dir).join("cosmic-ext-app-switcher.sock")
+}
 
 #[derive(Parser, Debug)]
 #[command(name = "cosmic-ext-app-switcher")]
@@ -33,13 +36,13 @@ fn main() -> Result<()> {
 
     // If a switcher is already running, signal it to cycle and exit.
     let cmd = if args.reverse { b"prev" as &[u8] } else { b"next" as &[u8] };
-    if let Ok(mut s) = UnixStream::connect(SOCKET) {
+    if let Ok(mut s) = UnixStream::connect(socket_path()) {
         let _ = s.write_all(cmd);
         return Ok(());
     }
 
     // We are the first instance. Clean up any stale socket from a crash.
-    let _ = std::fs::remove_file(SOCKET);
+    let _ = std::fs::remove_file(socket_path());
 
     let theme = load_theme();
     let (toplevels, cmd_tx) = wayland::spawn_wayland_thread()?;

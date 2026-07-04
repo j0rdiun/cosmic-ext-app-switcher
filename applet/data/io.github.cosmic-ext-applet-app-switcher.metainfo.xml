@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>io.github.cosmic-ext-applet-app-switcher</id>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>GPL-3.0-only</project_license>
+  <project_group>COSMIC</project_group>
+  <developer_name>j0rdiun</developer_name>
+  <name>App Switcher</name>
+  <summary>macOS-style Super+Tab app switcher for COSMIC</summary>
+  <url type="homepage">https://github.com/j0rdiun/cosmic-ext-app-switcher</url>
+  <url type="bugtracker">https://github.com/j0rdiun/cosmic-ext-app-switcher/issues</url>
+  <url type="contribute">https://github.com/j0rdiun/cosmic-ext-app-switcher</url>
+  <content_rating type="oars-1.1" />
+  <branding>
+    <color type="primary" scheme_preference="light">#f0f0f0</color>
+    <color type="primary" scheme_preference="dark">#212121</color>
+  </branding>
+  <description>
+    <p>
+      A macOS-style horizontal app switcher for the COSMIC desktop. Press Super+Tab
+      to cycle through open windows with a smooth overlay — without letting go of Super.
+      The panel applet lets you pick from Dark, Light, Frosted, and Midnight themes.
+    </p>
+    <p>
+      On first use, click "Enable Super+Tab" in the panel applet to register the
+      keyboard shortcut automatically. No terminal required.
+    </p>
+  </description>
+  <icon type="stock">io.github.cosmic-ext-applet-app-switcher-symbolic</icon>
+  <launchable type="desktop-id">io.github.cosmic-ext-applet-app-switcher.desktop</launchable>
+  <screenshots>
+    <screenshot type="default">
+      <image>https://raw.githubusercontent.com/j0rdiun/cosmic-ext-app-switcher/main/docs/screenshot-applet.png</image>
+      <caption>Panel applet — theme picker and shortcut toggle</caption>
+    </screenshot>
+  </screenshots>
+  <releases>
+    <release version="0.1.3" date="2026-07-03">
+      <description>
+        <p>Initial release — Super+Tab overlay switcher with Dark, Light, Frosted, and Midnight themes.</p>
+      </description>
+    </release>
+  </releases>
+  <provides>
+    <id>com.system76.CosmicApplet</id>
+    <binary>cosmic-ext-applet-app-switcher</binary>
+    <binary>cosmic-ext-app-switcher</binary>
+  </provides>
+  <categories>
+    <category>Utility</category>
+  </categories>
+</component>

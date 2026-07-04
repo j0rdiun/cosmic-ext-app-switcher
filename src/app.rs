@@ -157,7 +157,7 @@ impl Application for AppSwitcher {
             Subscription::run_with(TypeId::of::<SocketSub>(), |_| {
                 cosmic::iced::stream::channel(16, |mut tx: cosmic::iced::futures::channel::mpsc::Sender<Message>| async move {
                     use tokio::io::AsyncReadExt;
-                    let listener = match tokio::net::UnixListener::bind(crate::SOCKET) {
+                    let listener = match tokio::net::UnixListener::bind(crate::socket_path()) {
                         Ok(l) => l,
                         Err(_) => { std::future::pending::<()>().await; unreachable!() }
                     };
