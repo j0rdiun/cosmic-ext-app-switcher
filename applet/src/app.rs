@@ -10,7 +10,7 @@ use cosmic::{
 };
 use cosmic::iced::platform_specific::shell::commands::popup::{destroy_popup, get_popup};
 use cosmic::cosmic_config::{ConfigGet, ConfigSet};
-use switcher_config::{Theme, APP_ID, CONFIG_VERSION};
+use switcher_config::{Theme, WorkspaceScope, APP_ID, CONFIG_VERSION};
 
 const APPLET_ID: &str = "io.github.cosmic-ext-applet-app-switcher";
 
@@ -18,6 +18,7 @@ pub struct AppletApp {
     core:                Core,
     popup:               Option<WindowId>,
     current_theme:       Theme,
+    current_scope:       WorkspaceScope,
     config_handler:      Option<cosmic::cosmic_config::Config>,
     shortcut_configured: bool,
     shortcut_error:      Option<String>,
@@ -28,6 +29,7 @@ pub enum Message {
     TogglePopup,
     PopupClosed(WindowId),
     SetTheme(Theme),
+    SetScope(WorkspaceScope),
     ToggleShortcut(bool),
 }
 
@@ -174,12 +176,17 @@ impl Application for AppletApp {
             .as_ref()
             .and_then(|c| c.get::<Theme>("theme").ok())
             .unwrap_or_default();
+        let current_scope  = config_handler
+            .as_ref()
+            .and_then(|c| c.get::<WorkspaceScope>("workspace_scope").ok())
+            .unwrap_or_default();
 
         (
             Self {
                 core,
                 popup: None,
                 current_theme,
+                current_scope,
                 config_handler,
                 shortcut_configured: shortcut_is_configured(),
                 shortcut_error: None,
@@ -223,6 +230,12 @@ impl Application for AppletApp {
                     let _ = handler.set("theme", &theme);
                 }
                 self.current_theme = theme;
+            }
+            Message::SetScope(scope) => {
+                if let Some(handler) = &self.config_handler {
+                    let _ = handler.set("workspace_scope", &scope);
+                }
+                self.current_scope = scope;
             }
             Message::ToggleShortcut(enable) => {
                 let result = if enable {
@@ -295,6 +308,31 @@ impl Application for AppletApp {
             })
             .collect();
 
+        let scope_options: Vec<Element<Message>> = WorkspaceScope::all()
+            .into_iter()
+            .map(|s| {
+                let selected = s == self.current_scope;
+                let label = s.label().to_string();
+
+                let card = container(text(label).size(12))
+                    .padding([6, 10])
+                    .style(move |_: &cosmic::Theme| ContainerStyle {
+                        border: Border {
+                            radius: 6.0.into(),
+                            width: if selected { 2.0 } else { 1.0 },
+                            color: if selected {
+                                Color::from_rgb(0.38, 0.58, 1.0)
+                            } else {
+                                Color::from_rgba(1.0, 1.0, 1.0, 0.15)
+                            },
+                        },
+                        ..Default::default()
+                    });
+
+                mouse_area(card).on_press(Message::SetScope(s)).into()
+            })
+            .collect();
+
         let shortcut_row = row![
             text("Super+Tab shortcut").size(14),
             cosmic::widget::Space::new().width(Length::Fill),
@@ -308,6 +346,9 @@ impl Application for AppletApp {
             cosmic::widget::divider::horizontal::default(),
             text("Theme").size(14),
             row(swatches).spacing(12),
+            cosmic::widget::divider::horizontal::default(),
+            text("Switch scope").size(14),
+            row(scope_options).spacing(8),
         ]
         .spacing(12)
         .padding(16)
