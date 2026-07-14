@@ -68,3 +68,30 @@ impl Theme {
         [v.bg[0], v.bg[1], v.bg[2]]
     }
 }
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
+pub enum WorkspaceScope {
+    #[default]
+    AllWorkspaces,
+    CurrentWorkspace,
+    CurrentOutput,
+}
+
+impl WorkspaceScope {
+    pub fn label(&self) -> &str {
+        match self {
+            WorkspaceScope::AllWorkspaces   => "All workspaces",
+            WorkspaceScope::CurrentWorkspace => "Current workspace",
+            WorkspaceScope::CurrentOutput    => "Current monitor",
+        }
+    }
+
+    // CurrentWorkspace is intentionally excluded: cosmic-comp never sends the legacy
+    // workspace_enter/workspace_leave events this project's protocol binding relies on,
+    // so it's currently a no-op (see src/wayland.rs). Left defined for a future migration
+    // to ext_foreign_toplevel_list_v1 + ext_workspace_enter/leave, but hidden from the
+    // picker so it doesn't look like a working option that silently does nothing.
+    pub fn all() -> [WorkspaceScope; 2] {
+        [WorkspaceScope::AllWorkspaces, WorkspaceScope::CurrentOutput]
+    }
+}

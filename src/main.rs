@@ -8,7 +8,7 @@ use clap::Parser;
 use std::io::Write;
 use std::os::unix::net::UnixStream;
 use cosmic::cosmic_config::ConfigGet;
-use switcher_config::{Theme, APP_ID, CONFIG_VERSION};
+use switcher_config::{Theme, WorkspaceScope, APP_ID, CONFIG_VERSION};
 
 pub fn socket_path() -> std::path::PathBuf {
     let dir = std::env::var("XDG_RUNTIME_DIR").unwrap_or_else(|_| "/tmp".to_string());
@@ -30,6 +30,14 @@ fn load_theme() -> Theme {
         .unwrap_or_default()
 }
 
+fn load_scope() -> WorkspaceScope {
+    use cosmic::cosmic_config::Config;
+    Config::new(APP_ID, CONFIG_VERSION)
+        .ok()
+        .and_then(|c| c.get::<WorkspaceScope>("workspace_scope").ok())
+        .unwrap_or_default()
+}
+
 fn main() -> Result<()> {
     env_logger::init();
     let args = Args::parse();
@@ -45,7 +53,8 @@ fn main() -> Result<()> {
     let _ = std::fs::remove_file(socket_path());
 
     let theme = load_theme();
-    let (toplevels, cmd_tx) = wayland::spawn_wayland_thread()?;
+    let scope = load_scope();
+    let (toplevels, cmd_tx) = wayland::spawn_wayland_thread(scope)?;
     if toplevels.is_empty() {
         return Ok(());
     }
