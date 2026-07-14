@@ -48,7 +48,30 @@ cosmic-comp watches this file and reloads live on change.
 
 ## Key dependencies
 
-- `libcosmic` (git, pop-os/libcosmic) — features: `wayland`, `tokio`, `winit`, `multi-window`
-- `cosmic-protocols` (git, pop-os/cosmic-protocols, rev `d0e95be`) — `zcosmic_toplevel_*` protocol bindings
+- `libcosmic` (git, pop-os/libcosmic, rev `417923f`) — features: `wayland`, `tokio`, `winit`, `multi-window`
+- `cosmic-protocols` (git, pop-os/cosmic-protocols, rev `c253ec1`) — `zcosmic_toplevel_*` protocol bindings
 - `tokio` — async socket listener in subscription
 - `freedesktop-desktop-entry` — `.desktop` file parsing for icon names
+
+Keep the revs above in sync with `Cargo.toml`/`Cargo.lock` — check both when bumping.
+
+### Finding the right rev after a COSMIC/cosmic-comp upgrade
+
+`zcosmic_*` protocols are unstable (`z`-prefixed) and their wire format can and does
+shift between cosmic-comp releases (e.g. a `_v1` global disappearing in favor of `_v2`,
+or a bumped max version like `zcosmic_toplevel_info_v1` going from v1 to v3). A client
+built against a mismatched `cosmic-protocols` rev can misinterpret event opcodes —
+this tends to surface as a segfault, not a clean error, since a wrong `event_created_child!`
+opcode mapping corrupts the object's type at the wayland-client level rather than failing loudly.
+
+There's no published table mapping cosmic-comp releases to compatible
+`libcosmic`/`cosmic-protocols` revs. To find one after an upgrade:
+
+1. Check the installed version: `dpkg -l cosmic-comp` (format: `0.1~<unix-ts>~24.04~<short-sha>`
+   — the trailing hex is cosmic-comp's own commit).
+2. Look up that commit on `github.com/pop-os/cosmic-comp` and open its `Cargo.lock`.
+3. Find the `libcosmic` and `cosmic-protocols` entries in that lock file — their pinned
+   `rev`s are what cosmic-comp itself was built and tested against for that release.
+4. Update this project's `Cargo.toml` to match, run `cargo build`, and re-verify Super+Tab
+   end-to-end (a build succeeding is not sufficient — the crash described above happens
+   at runtime, not compile time).
