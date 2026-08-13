@@ -37,6 +37,12 @@ make install
 
 Changes take effect immediately — no logout required.
 
+> **Not available as a Flatpak.** cosmic-comp only offers `zcosmic_toplevel_info_v1` and
+> `zwlr_layer_shell_v1` to clients without a Wayland security context, and Flatpak always
+> attaches one — so a sandboxed build can neither list your windows nor draw the overlay,
+> and Super+Tab silently does nothing. Install with the script above instead. See
+> [#10](https://github.com/j0rdiun/cosmic-ext-app-switcher/issues/10) for the measurements.
+
 ---
 
 ## Uninstall

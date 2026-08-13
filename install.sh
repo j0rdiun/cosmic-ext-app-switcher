@@ -28,9 +28,12 @@ case "$ARCH" in
 esac
 
 # ── Check for COSMIC ─────────────────────────────────────────────────────────
+# The shortcuts directory itself may not exist yet on a fresh install that has never
+# customised a keybinding, so presence of COSMIC is checked more loosely — the shortcut
+# step below creates the config when it's missing.
 SHORTCUTS_DIR="$HOME/.config/cosmic/com.system76.CosmicSettings.Shortcuts"
-if [ ! -d "$SHORTCUTS_DIR" ]; then
-    echo "Error: COSMIC desktop shortcuts directory not found." >&2
+if ! command -v cosmic-comp &>/dev/null && [ ! -d "$HOME/.config/cosmic" ]; then
+    echo "Error: COSMIC desktop not detected." >&2
     echo "Make sure COSMIC desktop is installed and has been launched at least once." >&2
     exit 1
 fi
@@ -59,17 +62,23 @@ else
     exit 1
 fi
 
-get_url() {
-    echo "$RELEASE_JSON" | grep "browser_download_url" | grep "$1" | grep "$ARCH_TAG" | cut -d '"' -f 4
+# Match on the asset *filename* only. Matching anywhere in the line would also hit the
+# repository name inside every asset URL ("…/cosmic-ext-app-switcher/releases/download/…"),
+# which returned two URLs for the switcher and made curl fail with
+# "URL rejected: Malformed input to a URL function".
+get_url() {                                     # $1 = exact asset filename
+    echo "$RELEASE_JSON" \
+        | grep -o '"browser_download_url": *"[^"]*"' \
+        | cut -d '"' -f 4 \
+        | awk -v want="/$1" 'substr($0, length($0) - length(want) + 1) == want' \
+        | head -n1
 }
 
-get_asset_url() {
-    echo "$RELEASE_JSON" | grep "browser_download_url" | grep "$1" | cut -d '"' -f 4
-}
-
-SWITCHER_URL=$(get_url "$BINARY")
-APPLET_URL=$(get_url "$APPLET")
-SVG_URL=$(get_asset_url "$SVG_NAME")
+# `|| true` keeps a no-match (empty) result from aborting the script under `set -e`,
+# so the explicit empty checks below stay reachable.
+SWITCHER_URL=$(get_url "$BINARY-$ARCH_TAG" || true)
+APPLET_URL=$(get_url "$APPLET-$ARCH_TAG" || true)
+SVG_URL=$(get_url "$SVG_NAME" || true)
 
 if [ -z "$SWITCHER_URL" ]; then
     echo "Error: could not find switcher binary for $ARCH_TAG." >&2
@@ -140,20 +149,48 @@ fi
 if [ -f "$SCRIPT_DIR/scripts/enable.sh" ]; then
     bash "$SCRIPT_DIR/scripts/enable.sh"
 else
-    CONFIG=$(find "$SHORTCUTS_DIR" -name "system_actions" 2>/dev/null | sort -V | tail -1)
+    # Standalone (curl | bash) path — mirrors scripts/find-config.sh and
+    # scripts/shortcut-config.sh, which aren't on disk here.
+    CONFIG=$(find "$SHORTCUTS_DIR" -name "system_actions" 2>/dev/null | sort -V | tail -1 || true)
     if [ -z "$CONFIG" ]; then
-        echo "Warning: could not find COSMIC system_actions config — shortcut not registered." >&2
-        echo "Run 'make enable' from the project directory to register manually." >&2
-        exit 0
+        # Never customised shortcuts before: create the config in the newest schema dir.
+        VERSION_DIR=$(find "$SHORTCUTS_DIR" -maxdepth 1 -type d -name 'v[0-9]*' 2>/dev/null | sort -V | tail -1 || true)
+        CONFIG="${VERSION_DIR:-$SHORTCUTS_DIR/v1}/system_actions"
     fi
-    if grep -q "cosmic-ext-app-switcher" "$CONFIG"; then
+
+    if [ -f "$CONFIG" ] && grep -q "cosmic-ext-app-switcher" "$CONFIG"; then
         echo "Shortcut already registered."
     else
+        # Rebuild the RON map rather than patching it: a file left without its braces
+        # fails to parse, and cosmic-settings-daemon then silently falls back to the
+        # packaged defaults, dropping the user's other overrides (issue #10).
+        BODY=""
+        if [ -s "$CONFIG" ]; then
+            BODY=$(awk '
+                /^[[:space:]]*\{?[[:space:]]*\}?[[:space:]]*$/          { next }
+                /^[[:space:]]*(WindowSwitcher|WindowSwitcherPrevious):/ { next }
+                { print }
+            ' "$CONFIG")
+        fi
+
         TMPCONF=$(mktemp)
-        grep -vE "^\s*(WindowSwitcher|WindowSwitcherPrevious):" "$CONFIG" | head -n -1 > "$TMPCONF"
-        printf '    WindowSwitcher: "%s",\n    WindowSwitcherPrevious: "%s --reverse",\n}\n' \
-            "$INSTALL_DIR/$BINARY" "$INSTALL_DIR/$BINARY" >> "$TMPCONF"
+        {
+            printf '{\n'
+            if [ -n "$BODY" ]; then printf '%s\n' "$BODY"; fi
+            printf '    WindowSwitcher: "%s",\n' "$INSTALL_DIR/$BINARY"
+            printf '    WindowSwitcherPrevious: "%s --reverse",\n' "$INSTALL_DIR/$BINARY"
+            printf '}\n'
+        } > "$TMPCONF"
+
+        if ! head -n1 "$TMPCONF" | grep -q '^{' || ! tail -n1 "$TMPCONF" | grep -q '^}'; then
+            rm -f "$TMPCONF"
+            echo "Error: refusing to write malformed shortcut config to $CONFIG" >&2
+            exit 1
+        fi
+
+        mkdir -p "$(dirname "$CONFIG")"
         mv "$TMPCONF" "$CONFIG"
+        chmod 600 "$CONFIG"
         echo "Shortcut registered."
     fi
 fi

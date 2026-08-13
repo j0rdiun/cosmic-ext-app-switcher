@@ -99,6 +99,50 @@ fn switcher_exec() -> String {
     }
 }
 
+/// Rebuild the `system_actions` RON map: every entry except our two keys, wrapped in a
+/// fresh pair of braces, with our entries appended when `cmd` is `Some`.
+///
+/// Rebuilding rather than splicing is what keeps degenerate inputs safe — an empty file
+/// or a single-line `{}` used to produce a body with no opening brace. That doesn't fail
+/// loudly: cosmic-settings-daemon logs a parse error and falls back to the packaged
+/// defaults, so the user's other overrides quietly stop working (issue #10). Mirrors
+/// scripts/shortcut-config.sh.
+fn rebuild_shortcut_map(existing: Option<&str>, cmd: Option<&str>) -> String {
+    let mut out = String::from("{\n");
+
+    for line in existing.unwrap_or_default().lines() {
+        let t = line.trim();
+        if t.is_empty() || t == "{" || t == "}" || t == "{}" {
+            continue;
+        }
+        if t.starts_with("WindowSwitcher:") || t.starts_with("WindowSwitcherPrevious:") {
+            continue;
+        }
+        out.push_str(line);
+        out.push('\n');
+    }
+
+    if let Some(cmd) = cmd {
+        out.push_str(&format!("    WindowSwitcher: \"{cmd}\",\n"));
+        out.push_str(&format!("    WindowSwitcherPrevious: \"{cmd} --reverse\",\n"));
+    }
+
+    out.push('}');
+    out.push('\n');
+    out
+}
+
+fn write_shortcut_map(path: &std::path::Path, content: String) -> Result<(), String> {
+    if !content.starts_with('{') || !content.trim_end().ends_with('}') {
+        return Err("refusing to write malformed shortcut config".to_string());
+    }
+    std::fs::write(path, content).map_err(|e| e.to_string())?;
+    // cosmic-config writes these 0600; keep that when we create the file ourselves.
+    use std::os::unix::fs::PermissionsExt;
+    let _ = std::fs::set_permissions(path, std::fs::Permissions::from_mode(0o600));
+    Ok(())
+}
+
 fn do_unregister_shortcut() -> Result<(), String> {
     let path = match shortcuts_config_path() {
         Some(p) => p,
@@ -108,52 +152,23 @@ fn do_unregister_shortcut() -> Result<(), String> {
         return Ok(());
     }
     let content = std::fs::read_to_string(&path).map_err(|e| e.to_string())?;
-    let filtered: String = content
-        .lines()
-        .filter(|l| {
-            let t = l.trim();
-            !t.starts_with("WindowSwitcher:") && !t.starts_with("WindowSwitcherPrevious:")
-        })
-        .flat_map(|l| [l, "\n"])
-        .collect();
-    std::fs::write(&path, filtered).map_err(|e| e.to_string())
+    write_shortcut_map(&path, rebuild_shortcut_map(Some(&content), None))
 }
 
 fn do_register_shortcut() -> Result<(), String> {
     let path = shortcuts_config_path()
         .ok_or_else(|| "COSMIC shortcuts directory not found — is COSMIC installed?".to_string())?;
 
-    let cmd = switcher_exec();
+    let existing = std::fs::read_to_string(&path).ok();
+    if existing.as_deref().is_some_and(|s| s.contains("cosmic-ext-app-switcher")) {
+        return Ok(());
+    }
 
     std::fs::create_dir_all(path.parent().unwrap())
         .map_err(|e| e.to_string())?;
 
-    let content = if let Ok(existing) = std::fs::read_to_string(&path) {
-        if existing.contains("cosmic-ext-app-switcher") {
-            return Ok(());
-        }
-        // Strip any existing WindowSwitcher bindings before adding ours —
-        // appending without removing would create duplicate RON keys.
-        let cleaned: String = existing
-            .lines()
-            .filter(|l| {
-                let t = l.trim();
-                !t.starts_with("WindowSwitcher:") && !t.starts_with("WindowSwitcherPrevious:")
-            })
-            .flat_map(|l| [l, "\n"])
-            .collect();
-        let last_brace = cleaned.rfind('}').unwrap_or(cleaned.len());
-        let before = cleaned[..last_brace].trim_end();
-        format!(
-            "{before}\n    WindowSwitcher: \"{cmd}\",\n    WindowSwitcherPrevious: \"{cmd} --reverse\",\n}}\n"
-        )
-    } else {
-        format!(
-            "{{\n    WindowSwitcher: \"{cmd}\",\n    WindowSwitcherPrevious: \"{cmd} --reverse\",\n}}\n"
-        )
-    };
-
-    std::fs::write(&path, content).map_err(|e| e.to_string())
+    let cmd = switcher_exec();
+    write_shortcut_map(&path, rebuild_shortcut_map(existing.as_deref(), Some(&cmd)))
 }
 
 // ---------------------------------------------------------------------------
@@ -333,6 +348,15 @@ impl Application for AppletApp {
             })
             .collect();
 
+        let flatpak_note: Option<Element<Message>> = std::env::var("FLATPAK_ID").ok().map(|_| {
+            // Nothing of ours runs at `flatpak uninstall`, so a shortcut left registered
+            // keeps Super+Tab pointing at a command that no longer exists — and COSMIC
+            // does not fall back to its built-in switcher (issue #10).
+            text("Flatpak: turn this off before uninstalling, or Super+Tab stays bound to a removed app.")
+                .size(10)
+                .into()
+        });
+
         let shortcut_row = row![
             text("Super+Tab shortcut").size(14),
             cosmic::widget::Space::new().width(Length::Fill),
@@ -341,14 +365,22 @@ impl Application for AppletApp {
         ]
         .align_y(Alignment::Center);
 
+        let mut shortcut_section = column![shortcut_row].spacing(6);
+        if let Some(note) = flatpak_note {
+            shortcut_section = shortcut_section.push(note);
+        }
+
         let mut content = column![
-            shortcut_row,
+            shortcut_section,
             cosmic::widget::divider::horizontal::default(),
             text("Theme").size(14),
             row(swatches).spacing(12),
             cosmic::widget::divider::horizontal::default(),
             text("Switch scope").size(14),
             row(scope_options).spacing(8),
+            // Shown so bug reports can name a version — see the release checklist in
+            // .claude/CLAUDE.md.
+            text(format!("v{}", env!("CARGO_PKG_VERSION"))).size(10),
         ]
         .spacing(12)
         .padding(16)
@@ -361,5 +393,60 @@ impl Application for AppletApp {
         }
 
         self.core.applet.popup_container(content).into()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::rebuild_shortcut_map;
+
+    const CMD: &str = "/home/u/.local/bin/cosmic-ext-app-switcher";
+
+    fn assert_well_formed(s: &str) {
+        assert!(s.starts_with("{\n"), "missing opening brace: {s:?}");
+        assert!(s.ends_with("}\n"), "missing closing brace: {s:?}");
+    }
+
+    /// The inputs that used to yield a body with no opening brace.
+    #[test]
+    fn degenerate_inputs_stay_well_formed() {
+        for existing in [None, Some(""), Some("{}"), Some("{}\n"), Some("{\n}\n"), Some("\n\n")] {
+            let out = rebuild_shortcut_map(existing, Some(CMD));
+            assert_well_formed(&out);
+            assert_eq!(out.matches("WindowSwitcher:").count(), 1, "for {existing:?}");
+        }
+    }
+
+    #[test]
+    fn other_entries_are_preserved() {
+        let existing = "{\n    Terminal: \"ghostty\",\n    WebBrowser: \"firefox\",\n}\n";
+        let out = rebuild_shortcut_map(Some(existing), Some(CMD));
+        assert_well_formed(&out);
+        assert!(out.contains("Terminal: \"ghostty\""));
+        assert!(out.contains("WebBrowser: \"firefox\""));
+        assert!(out.contains(&format!("WindowSwitcher: \"{CMD}\"")));
+        assert!(out.contains(&format!("WindowSwitcherPrevious: \"{CMD} --reverse\"")));
+    }
+
+    #[test]
+    fn existing_bindings_are_replaced_not_duplicated() {
+        let existing = "{\n    WindowSwitcher: \"/old\",\n    WindowSwitcherPrevious: \"/old --reverse\",\n}\n";
+        let out = rebuild_shortcut_map(Some(existing), Some(CMD));
+        assert_eq!(out.matches("WindowSwitcher:").count(), 1);
+        assert_eq!(out.matches("WindowSwitcherPrevious:").count(), 1);
+        assert!(!out.contains("/old"));
+    }
+
+    #[test]
+    fn unregister_leaves_a_valid_map() {
+        let existing = "{\n    Terminal: \"ghostty\",\n    WindowSwitcher: \"x\",\n    WindowSwitcherPrevious: \"x --reverse\",\n}\n";
+        let out = rebuild_shortcut_map(Some(existing), None);
+        assert_well_formed(&out);
+        assert!(!out.contains("WindowSwitcher"));
+        assert!(out.contains("Terminal: \"ghostty\""));
+
+        // …and an empty map when we were the only entry.
+        let only_ours = "{\n    WindowSwitcher: \"x\",\n}\n";
+        assert_eq!(rebuild_shortcut_map(Some(only_ours), None), "{\n}\n");
     }
 }

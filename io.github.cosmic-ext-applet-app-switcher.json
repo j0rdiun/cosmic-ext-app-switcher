@@ -6,9 +6,9 @@
   "sdk-extensions": ["org.freedesktop.Sdk.Extension.rust-stable"],
   "command": "cosmic-ext-applet-app-switcher",
   "finish-args": [
+    "--share=ipc",
     "--socket=wayland",
     "--device=dri",
-    "--share=ipc",
     "--filesystem=xdg-config/cosmic:rw",
     "--filesystem=xdg-data/applications:ro",
     "--filesystem=xdg-data/icons:ro",

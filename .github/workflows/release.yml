@@ -9,8 +9,33 @@ permissions:
   contents: write
 
 jobs:
+  check-version:
+    name: Check version consistency
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+
+      # The tag, the crate version and the metainfo <release> are three separate places
+      # that have drifted before — the store shows the metainfo one, so a stale entry
+      # ships a release users see as an older version.
+      - name: Tag, Cargo.toml and metainfo must agree
+        run: |
+          TAG="${GITHUB_REF_NAME#v}"
+          CARGO=$(sed -n '/^\[workspace\.package\]/,/^\[/p' Cargo.toml \
+                  | sed -n 's/^version *= *"\(.*\)"/\1/p' | head -n1)
+          META=$(sed -n 's/.*<release version="\([^"]*\)".*/\1/p' \
+                  applet/data/io.github.cosmic-ext-applet-app-switcher.metainfo.xml | head -n1)
+
+          echo "tag=$TAG  cargo=$CARGO  metainfo=$META"
+          if [ "$TAG" != "$CARGO" ] || [ "$TAG" != "$META" ]; then
+            echo "::error::version mismatch — tag '$TAG', Cargo.toml '$CARGO', metainfo '$META'"
+            echo "Bump [workspace.package] version and add a matching <release> entry, then re-tag."
+            exit 1
+          fi
+
   build-x86_64:
     name: Build x86_64
+    needs: check-version
     runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v4
@@ -50,6 +75,7 @@ jobs:
 
   build-aarch64:
     name: Build aarch64
+    needs: check-version
     runs-on: ubuntu-24.04-arm
     steps:
       - uses: actions/checkout@v4
