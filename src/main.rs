@@ -16,7 +16,7 @@ pub fn socket_path() -> std::path::PathBuf {
 }
 
 #[derive(Parser, Debug)]
-#[command(name = "cosmic-ext-app-switcher")]
+#[command(name = "cosmic-ext-app-switcher", version)]
 pub struct Args {
     #[arg(long, default_value_t = false)]
     pub reverse: bool,

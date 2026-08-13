@@ -4,6 +4,9 @@ set -euo pipefail
 BINARY="$HOME/.local/bin/cosmic-ext-app-switcher"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
+# shellcheck source=scripts/shortcut-config.sh
+. "$SCRIPT_DIR/shortcut-config.sh"
+
 set +e
 CONFIG=$("$SCRIPT_DIR/find-config.sh")
 rc=$?
@@ -12,12 +15,12 @@ set -e
 case "$rc" in
     0) ;;
     2)
+        # No config yet — find-config.sh printed the canonical creation path.
         if [ ! -f "$BINARY" ]; then
             echo "Error: binary not found at $BINARY — run 'make install' first to deploy the binary." >&2
             exit 1
         fi
-        mkdir -p "$(dirname "$CONFIG")"
-        printf '{\n    WindowSwitcher: "%s",\n    WindowSwitcherPrevious: "%s --reverse",\n}\n' "$BINARY" "$BINARY" > "$CONFIG"
+        shortcut_register "$CONFIG" "$BINARY"
         echo "Created $CONFIG and enabled. cosmic-comp will reload shortcuts automatically."
         exit 0
         ;;
@@ -35,12 +38,7 @@ if [ ! -f "$BINARY" ]; then
     echo "Warning: binary not found at $BINARY — run 'make install' first to deploy the binary."
 fi
 
-TMPFILE=$(mktemp)
-# Strip any existing WindowSwitcher bindings (avoids duplicate RON keys if another
-# switcher was registered), remove the closing brace, then append our entries.
-grep -vE "^\s*(WindowSwitcher|WindowSwitcherPrevious):" "$CONFIG" | head -n -1 > "$TMPFILE"
-printf '    WindowSwitcher: "%s",\n    WindowSwitcherPrevious: "%s --reverse",\n}\n' \
-    "$BINARY" "$BINARY" >> "$TMPFILE"
-mv "$TMPFILE" "$CONFIG"
+# Rebuilds the map with our entries, keeping every other key (see shortcut-config.sh).
+shortcut_register "$CONFIG" "$BINARY"
 
 echo "Enabled. cosmic-comp will reload shortcuts automatically."

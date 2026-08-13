@@ -75,3 +75,51 @@ There's no published table mapping cosmic-comp releases to compatible
 4. Update this project's `Cargo.toml` to match, run `cargo build`, and re-verify Super+Tab
    end-to-end (a build succeeding is not sufficient — the crash described above happens
    at runtime, not compile time).
+
+## Release checklist
+
+The version lives in `[workspace.package]` in the root `Cargo.toml`; both crates inherit it
+with `version.workspace = true`. Three things must agree or the release workflow fails:
+
+1. Bump `[workspace.package] version`.
+2. Add a matching `<release version="…" date="…">` at the top of
+   `applet/data/io.github.cosmic-ext-applet-app-switcher.metainfo.xml`. **This entry is what
+   the COSMIC Store displays** — a stale one is why the store advertised 0.1.3 long after
+   v0.1.4 shipped.
+3. Tag `vX.Y.Z` and push. `.github/workflows/release.yml` checks tag/Cargo/metainfo before
+   building and refuses to publish a mismatch.
+4. The store does **not** follow tags or `main`. It rebuilds only when a PR to
+   `pop-os/cosmic-flatpak` changes the pinned `"commit"` in
+   `app/io.github.cosmic-ext-applet-app-switcher/io.github.cosmic-ext-applet-app-switcher.json`.
+   Open that PR, regenerating the sibling `cargo-sources.json`
+   (`flatpak/generate-cargo-sources.sh`) whenever `Cargo.lock` moved.
+
+The in-repo `io.github.cosmic-ext-applet-app-switcher.json` is a local-build variant, and
+differs from the upstream one in exactly two ways — diff them before opening a PR:
+
+- `sources` uses a local `dir` instead of a pinned `git` commit, so `flatpak-builder`
+  builds the working tree.
+- it omits `base: com.system76.Cosmic.BaseApp` / `base-version: stable`. That base is not
+  published on the user-facing `cosmic` remote (only cosmic-flatpak's own build
+  environment has it), so keeping it here would break local builds. Re-add it in the PR.
+
+## Flatpak: the switcher cannot work inside the sandbox
+
+cosmic-comp gates its privileged globals on `client_not_sandboxed`
+(`src/state.rs`), which is false for any client carrying a Wayland security context —
+which Flatpak ≥1.15 always attaches. Verified empirically on 2026-08-13 by dumping
+`wl_registry` inside and outside the sandbox: the host sees 58 globals, the sandbox 36,
+and the 22 missing ones include **`zcosmic_toplevel_info_v1`, `zcosmic_toplevel_manager_v1`
+and `zwlr_layer_shell_v1`** — i.e. no window list and no overlay surface. The store build
+therefore exits silently on Super+Tab.
+
+Two further sandbox facts: `--filesystem=/usr/share/applications:ro` (and the `icons`/
+`pixmaps` equivalents) in the manifest are **silently ignored** — Flatpak reserves `/usr`,
+so the sandbox sees 0 host `.desktop` files and only the `hicolor` icon theme, breaking
+icon lookup. And nothing of ours runs at `flatpak uninstall`, so a registered shortcut
+outlives the app.
+
+The only configuration found that restores the globals is opting out of the Wayland
+sandbox entirely: `--nosocket=wayland --filesystem=xdg-run/wayland-N` plus
+`WAYLAND_DISPLAY` pointed at the host socket (verified: 58 globals inside the sandbox).
+That is a deliberate sandbox bypass and needs cosmic-flatpak maintainer buy-in.

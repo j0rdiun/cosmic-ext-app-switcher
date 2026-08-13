@@ -2,9 +2,15 @@
 members = [".", "applet", "config"]
 resolver = "2"
 
+# Single source of truth for the release version. Bump this together with the newest
+# <release> entry in applet/data/…metainfo.xml — the store shows the metainfo version,
+# and .github/workflows/release.yml fails the release if the two disagree with the tag.
+[workspace.package]
+version = "0.1.5"
+
 [package]
 name = "cosmic-ext-app-switcher"
-version = "0.1.0"
+version.workspace = true
 edition = "2024"
 
 [[bin]]

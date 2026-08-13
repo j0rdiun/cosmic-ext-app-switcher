@@ -14,26 +14,35 @@ SHORTCUTS_DIR="$HOME/.config/cosmic/com.system76.CosmicSettings.Shortcuts"
 echo "Uninstalling cosmic-ext-app-switcher..."
 
 # ── Remove shortcut registration ──────────────────────────────────────────────
+# Matches on the RON *keys*, not on the binary path: a substring match would also delete
+# an unrelated entry that happens to mention the path, and rebuilding the whole map keeps
+# the braces intact. Dropping the WindowSwitcher keys is what hands Super+Tab back to
+# COSMIC's built-in switcher — a leftover entry pointing at a removed binary just spawns
+# nothing, with no fallback (issue #10).
 CONFIG=$(find "$SHORTCUTS_DIR" -name "system_actions" 2>/dev/null | sort -V | tail -1 || true)
-if [ -n "$CONFIG" ]; then
-    CHANGED=0
-    if grep -q "$BINARY" "$CONFIG" 2>/dev/null; then
-        TMPFILE=$(mktemp)
-        grep -v "$BINARY" "$CONFIG" > "$TMPFILE"
-        mv "$TMPFILE" "$CONFIG"
-        CHANGED=1
+if [ -n "$CONFIG" ] && grep -qE "^\s*(WindowSwitcher|WindowSwitcherPrevious):" "$CONFIG" 2>/dev/null; then
+    BODY=$(awk '
+        /^[[:space:]]*\{?[[:space:]]*\}?[[:space:]]*$/          { next }
+        /^[[:space:]]*(WindowSwitcher|WindowSwitcherPrevious):/ { next }
+        { print }
+    ' "$CONFIG")
+
+    TMPFILE=$(mktemp)
+    {
+        printf '{\n'
+        if [ -n "$BODY" ]; then printf '%s\n' "$BODY"; fi
+        printf '}\n'
+    } > "$TMPFILE"
+
+    if ! head -n1 "$TMPFILE" | grep -q '^{' || ! tail -n1 "$TMPFILE" | grep -q '^}'; then
+        rm -f "$TMPFILE"
+        echo "Error: refusing to write malformed shortcut config to $CONFIG" >&2
+        exit 1
     fi
-    if grep -q "$OLD_BINARY" "$CONFIG" 2>/dev/null; then
-        TMPFILE=$(mktemp)
-        grep -v "$OLD_BINARY" "$CONFIG" > "$TMPFILE"
-        mv "$TMPFILE" "$CONFIG"
-        CHANGED=1
-    fi
-    if [ "$CHANGED" -eq 1 ]; then
-        echo "Shortcut removed. COSMIC default switcher restored."
-    else
-        echo "Shortcut not registered — nothing to remove."
-    fi
+
+    mv "$TMPFILE" "$CONFIG"
+    chmod 600 "$CONFIG"
+    echo "Shortcut removed. COSMIC default switcher restored."
 else
     echo "Shortcut not registered — nothing to remove."
 fi
