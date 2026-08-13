@@ -13,7 +13,14 @@ BINARY="cosmic-ext-app-switcher"
 APPLET="cosmic-ext-applet-app-switcher"
 APPLET_DESKTOP_ID="io.github.cosmic-ext-applet-app-switcher"
 SVG_NAME="io.github.cosmic-ext-applet-app-switcher-symbolic.svg"
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]:-}")" && pwd)" || SCRIPT_DIR=""
+# Piped (curl | bash) means there is no script file, and `dirname ""` would resolve to the
+# current directory — letting whatever the user happens to have cd'd into masquerade as a
+# checkout of this repo and supply its scripts/. Only trust a real script path.
+if [ -n "${BASH_SOURCE[0]:-}" ]; then
+    SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+else
+    SCRIPT_DIR=""
+fi
 
 # ── Detect architecture ───────────────────────────────────────────────────────
 ARCH=$(uname -m)

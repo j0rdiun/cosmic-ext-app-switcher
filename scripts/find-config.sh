@@ -4,10 +4,17 @@
 
 SHORTCUTS_DIR="$HOME/.config/cosmic/com.system76.CosmicSettings.Shortcuts"
 
+# The shortcuts directory is only created once something writes a shortcut, so its absence
+# means "nothing customised yet", not "COSMIC missing" — that's the exit-2 case. Only a
+# system with no sign of COSMIC at all is exit 1.
 if [ ! -d "$SHORTCUTS_DIR" ]; then
-    echo "Error: COSMIC shortcuts directory not found: $SHORTCUTS_DIR" >&2
-    echo "Is COSMIC desktop installed and has it been opened at least once?" >&2
-    exit 1
+    if ! command -v cosmic-comp >/dev/null 2>&1 && [ ! -d "$HOME/.config/cosmic" ]; then
+        echo "Error: COSMIC desktop not detected." >&2
+        echo "Is COSMIC desktop installed and has it been opened at least once?" >&2
+        exit 1
+    fi
+    echo "$SHORTCUTS_DIR/v1/system_actions"
+    exit 2
 fi
 
 CONFIG=$(find "$SHORTCUTS_DIR" -name "system_actions" 2>/dev/null | sort -V | tail -1)
