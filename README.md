@@ -37,11 +37,34 @@ make install
 
 Changes take effect immediately — no logout required.
 
-> **Not available as a Flatpak.** cosmic-comp only offers `zcosmic_toplevel_info_v1` and
-> `zwlr_layer_shell_v1` to clients without a Wayland security context, and Flatpak always
-> attaches one — so a sandboxed build can neither list your windows nor draw the overlay,
-> and Super+Tab silently does nothing. Install with the script above instead. See
-> [#10](https://github.com/j0rdiun/cosmic-ext-app-switcher/issues/10) for the measurements.
+> ### Do not install this from the COSMIC Store
+>
+> The store listing is broken and cannot be made to work. cosmic-comp only offers
+> `zcosmic_toplevel_info_v1`, `zcosmic_toplevel_manager_v1` and `zwlr_layer_shell_v1` to
+> clients without a Wayland security context, and Flatpak always attaches one, so a
+> sandboxed build can neither list your windows nor draw the overlay. Super+Tab silently
+> does nothing. Measurements are in
+> [#10](https://github.com/j0rdiun/cosmic-ext-app-switcher/issues/10); System76 confirmed
+> there is no path for it today in
+> [cosmic-comp#2734](https://github.com/pop-os/cosmic-comp/issues/2734), and are planning
+> configurable `cosmic-session` components to allow it in future.
+>
+> Removal of the listing is requested in
+> [cosmic-flatpak#259](https://github.com/pop-os/cosmic-flatpak/issues/259). Until that
+> lands it is still installable, and still serves 0.1.3. **Use the install script above
+> instead.**
+>
+> If you already installed it from the store, uninstalling leaves Super+Tab dead, because
+> the shortcut it registered outlives the app and COSMIC does not fall back to its built-in
+> switcher. To clean up:
+>
+> ```bash
+> flatpak uninstall io.github.cosmic-ext-applet-app-switcher
+> curl -fsSL https://raw.githubusercontent.com/j0rdiun/cosmic-ext-app-switcher/main/uninstall.sh | bash
+> ```
+>
+> The second command rewrites COSMIC's shortcut config and restores the default switcher.
+> It is safe to run whether or not the native version is installed.
 
 ---
 
