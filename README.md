@@ -46,7 +46,7 @@ Changes take effect immediately — no logout required.
 > does nothing. Measurements are in
 > [#10](https://github.com/j0rdiun/cosmic-ext-app-switcher/issues/10); System76 confirmed
 > there is no path for it today in
-> [cosmic-comp#2734](https://github.com/pop-os/cosmic-comp/issues/2734), and are planning
+> [cosmic-comp#2734](https://github.com/pop-os/cosmic-comp/issues/2734#issuecomment-5293857795), and are planning
 > configurable `cosmic-session` components to allow it in future.
 >
 > Removal of the listing is requested in
