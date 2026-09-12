@@ -88,20 +88,16 @@ with `version.workspace = true`. Three things must agree or the release workflow
    v0.1.4 shipped.
 3. Tag `vX.Y.Z` and push. `.github/workflows/release.yml` checks tag/Cargo/metainfo before
    building and refuses to publish a mismatch.
-4. The store does **not** follow tags or `main`. It rebuilds only when a PR to
-   `pop-os/cosmic-flatpak` changes the pinned `"commit"` in
-   `app/io.github.cosmic-ext-applet-app-switcher/io.github.cosmic-ext-applet-app-switcher.json`.
-   Open that PR, regenerating the sibling `cargo-sources.json`
-   (`flatpak/generate-cargo-sources.sh`) whenever `Cargo.lock` moved.
+There is no store step. The COSMIC Store listing was withdrawn on 2026-09-11
+(pop-os/cosmic-flatpak#268, via `end-of-life.txt`), so there is no upstream manifest to
+bump. Don't re-submit to cosmic-flatpak unless cosmic-comp stops gating the protocols
+below. The ref still exists on the `cosmic` remote as end-of-life: hidden from the store
+and `flatpak remote-ls`, but `flatpak install cosmic <id>` can still pull it.
 
-The in-repo `io.github.cosmic-ext-applet-app-switcher.json` is a local-build variant, and
-differs from the upstream one in exactly two ways — diff them before opening a PR:
-
-- `sources` uses a local `dir` instead of a pinned `git` commit, so `flatpak-builder`
-  builds the working tree.
-- it omits `base: com.system76.Cosmic.BaseApp` / `base-version: stable`. That base is not
-  published on the user-facing `cosmic` remote (only cosmic-flatpak's own build
-  environment has it), so keeping it here would break local builds. Re-add it in the PR.
+The in-repo `io.github.cosmic-ext-applet-app-switcher.json` is a local-build variant of the
+withdrawn upstream manifest: `sources` uses a local `dir` instead of a pinned `git` commit,
+and it omits `base: com.system76.Cosmic.BaseApp`, which only cosmic-flatpak's own build
+environment has.
 
 ## Flatpak: the switcher cannot work inside the sandbox
 

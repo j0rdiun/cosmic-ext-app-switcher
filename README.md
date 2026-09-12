@@ -37,9 +37,10 @@ make install
 
 Changes take effect immediately — no logout required.
 
-> ### Do not install this from the COSMIC Store
+> ### Not available from the COSMIC Store
 >
-> The store listing is broken and cannot be made to work. cosmic-comp only offers
+> A Flatpak build was listed in the COSMIC Store from August to September 2026. It never
+> worked, and cannot be made to work. cosmic-comp only offers
 > `zcosmic_toplevel_info_v1`, `zcosmic_toplevel_manager_v1` and `zwlr_layer_shell_v1` to
 > clients without a Wayland security context, and Flatpak always attaches one, so a
 > sandboxed build can neither list your windows nor draw the overlay. Super+Tab silently
@@ -49,12 +50,11 @@ Changes take effect immediately — no logout required.
 > [cosmic-comp#2734](https://github.com/pop-os/cosmic-comp/issues/2734#issuecomment-5293857795), and are planning
 > configurable `cosmic-session` components to allow it in future.
 >
-> Removal of the listing is requested in
-> [cosmic-flatpak#259](https://github.com/pop-os/cosmic-flatpak/issues/259). Until that
-> lands it is still installable, and still serves 0.1.3. **Use the install script above
-> instead.**
+> The listing was withdrawn in
+> [cosmic-flatpak#268](https://github.com/pop-os/cosmic-flatpak/pull/268), and existing
+> installs are now marked end-of-life. **Use the install script above.**
 >
-> If you already installed it from the store, uninstalling leaves Super+Tab dead, because
+> If you installed it from the store before then, uninstalling leaves Super+Tab dead, because
 > the shortcut it registered outlives the app and COSMIC does not fall back to its built-in
 > switcher. To clean up:
 >
