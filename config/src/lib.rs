@@ -18,6 +18,8 @@ pub struct ThemeValues {
     pub selected_bg:   [f32; 4],
     pub corner_radius: f32,
     pub icon_size:     u16,
+    /// Colour of the window-title line under the strip.
+    pub fg:            [f32; 4],
 }
 
 impl Theme {
@@ -28,24 +30,28 @@ impl Theme {
                 selected_bg:   [1.0,  1.0,  1.0,  0.25],
                 corner_radius: 14.0,
                 icon_size:     60,
+                fg:            [0.92, 0.92, 0.92, 1.0],
             },
             Theme::Light => ThemeValues {
                 bg:            [0.95, 0.95, 0.95, 0.88],
                 selected_bg:   [0.0,  0.0,  0.0,  0.12],
                 corner_radius: 14.0,
                 icon_size:     60,
+                fg:            [0.13, 0.13, 0.13, 1.0],
             },
             Theme::Frosted => ThemeValues {
                 bg:            [0.15, 0.15, 0.15, 0.60],
                 selected_bg:   [1.0,  1.0,  1.0,  0.18],
                 corner_radius: 18.0,
                 icon_size:     60,
+                fg:            [0.95, 0.95, 0.95, 1.0],
             },
             Theme::Midnight => ThemeValues {
                 bg:            [0.05, 0.07, 0.15, 0.95],
                 selected_bg:   [0.40, 0.60, 1.0,  0.30],
                 corner_radius: 14.0,
                 icon_size:     60,
+                fg:            [0.88, 0.91, 1.0,  1.0],
             },
         }
     }
