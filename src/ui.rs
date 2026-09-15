@@ -9,7 +9,7 @@ use cosmic::{
     Element,
 };
 use crate::app::{AppSwitcher, Message};
-use crate::icons::icon_name_for;
+use crate::icons::{AppIcon, icon_for};
 
 const CELL_PAD: u16 = 10;
 
@@ -24,14 +24,18 @@ pub fn view(state: &AppSwitcher) -> Element<Message> {
         .iter()
         .enumerate()
         .map(|(i, entry)| {
-            let icon_name = icon_name_for(&entry.app_id);
-            let selected  = i == state.selected;
+            let selected = i == state.selected;
 
-            let app_icon: Element<Message> = icon::from_name(icon_name.as_str())
-                .size(icon_sz)
-                .icon()
-                .size(icon_sz)
-                .into();
+            let app_icon: Element<Message> = match icon_for(&entry.app_id, icon_sz) {
+                AppIcon::Named(name) => icon::from_name(name.as_str())
+                    .size(icon_sz)
+                    .icon()
+                    .size(icon_sz)
+                    .into(),
+                AppIcon::File(path) => icon::icon(icon::from_path(path))
+                    .size(icon_sz)
+                    .into(),
+            };
 
             let cell = container(app_icon)
                 .padding(CELL_PAD)
