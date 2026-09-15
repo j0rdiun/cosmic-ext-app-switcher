@@ -60,4 +60,16 @@ check-compat:
 	@test -f $(INSTALL_DIR)/$(SWITCHER) && echo "  Switcher binary: installed" || echo "  Switcher binary: not installed"
 	@test -f $(INSTALL_DIR)/$(APPLET)   && echo "  Applet binary:   installed" || echo "  Applet binary:   not installed"
 	@command -v cosmic-comp >/dev/null 2>&1 && echo "  cosmic-comp: found" || echo "  cosmic-comp: not found (is COSMIC running?)"
+	@bin=$(SWITCHER_BIN); [ -x "$$bin" ] || bin=$(INSTALL_DIR)/$(SWITCHER); \
+	if [ ! -x "$$bin" ]; then \
+		echo "  Wayland interfaces: not checked (build or install the switcher first)"; \
+	else \
+		out=$$("$$bin" --check-compat 2>&1); rc=$$?; \
+		if [ $$rc -eq 2 ]; then \
+			echo "  Wayland interfaces: not checked ($$bin predates --check-compat, rebuild it)"; \
+		else \
+			echo "  Wayland interfaces:"; \
+			echo "$$out" | sed 's/^/    /'; \
+		fi; \
+	fi
 	@echo "Done."

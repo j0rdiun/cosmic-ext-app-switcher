@@ -76,6 +76,12 @@ There's no published table mapping cosmic-comp releases to compatible
    end-to-end (a build succeeding is not sufficient — the crash described above happens
    at runtime, not compile time).
 
+Before any of that, `cosmic-ext-app-switcher --check-compat` (also run by `make check-compat`)
+tells you whether a required global was removed or advertised below the version we bind.
+The list lives in `REQUIRED_GLOBALS` in `src/wayland.rs`, and the switcher checks the same
+list at startup. A clean result does not rule out the opcode-mismatch crash above: that needs
+the end-to-end Super+Tab test.
+
 ## Release checklist
 
 The version lives in `[workspace.package]` in the root `Cargo.toml`; both crates inherit it

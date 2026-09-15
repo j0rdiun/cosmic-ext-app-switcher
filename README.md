@@ -127,6 +127,8 @@ Each key press launches the binary fresh. The first invocation creates a layer-s
 - `zcosmic_toplevel_manager_v1` — activate a window
 - `zwlr_layer_shell_v1` — overlay surface centered on screen
 
+These are COSMIC-specific or privileged, and a COSMIC update could remove or change them. Run `cosmic-ext-app-switcher --check-compat` (or `make check-compat`) to see whether your compositor still offers them. If one is missing, Super+Tab does nothing and the switcher logs the reason, which you can find with `journalctl --user -b | grep app-switcher`.
+
 ---
 
 ## Project structure

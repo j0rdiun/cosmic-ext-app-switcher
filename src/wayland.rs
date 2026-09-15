@@ -1,8 +1,9 @@
 use std::sync::mpsc;
 
-use anyhow::Result;
+use anyhow::{Context, Result, anyhow};
 use wayland_client::{
     Connection, Dispatch, QueueHandle, event_created_child,
+    globals::{GlobalListContents, registry_queue_init},
     protocol::{wl_output, wl_registry, wl_seat},
 };
 use cosmic_protocols::{
@@ -34,6 +35,72 @@ pub enum ActivateCommand {
     Cancel,
 }
 
+// Versions we bind at. The compositor has to keep speaking the version a client bound, so
+// newer versions it adds later don't affect us. zcosmic_toplevel_info_v1 must stay at 1:
+// v2+ never emits Toplevel events.
+const TOPLEVEL_INFO_VERSION:    u32 = 1;
+const TOPLEVEL_MANAGER_VERSION: u32 = 1;
+const SEAT_VERSION:             u32 = 7;
+
+/// Globals the switcher can't work without, and the lowest version of each it accepts.
+/// zwlr_layer_shell_v1 is bound by libcosmic on its own connection (for the overlay), not
+/// by us, but cosmic-comp gates it the same way as the toplevel protocols, so it's checked
+/// here too. libcosmic's toolkit accepts any version from 1.
+const REQUIRED_GLOBALS: &[(&str, u32)] = &[
+    ("zcosmic_toplevel_info_v1",    TOPLEVEL_INFO_VERSION),
+    ("zcosmic_toplevel_manager_v1", TOPLEVEL_MANAGER_VERSION),
+    ("zwlr_layer_shell_v1",         1),
+    ("wl_seat",                     SEAT_VERSION),
+];
+
+pub struct GlobalStatus {
+    interface:  &'static str,
+    needed:     u32,
+    advertised: Option<u32>,  // highest version offered, None if not offered at all
+}
+
+impl GlobalStatus {
+    pub fn ok(&self) -> bool {
+        self.advertised.is_some_and(|v| v >= self.needed)
+    }
+}
+
+impl std::fmt::Display for GlobalStatus {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let (interface, needed) = (self.interface, self.needed);
+        match self.advertised {
+            Some(v) if v >= needed => write!(f, "{interface}: ok (v{v}, needs v{needed})"),
+            Some(v) => write!(f, "{interface}: TOO OLD (v{v}, needs v{needed})"),
+            None    => write!(f, "{interface}: NOT offered (needs v{needed})"),
+        }
+    }
+}
+
+fn required_globals_status(advertised: &[(String, u32)]) -> Vec<GlobalStatus> {
+    REQUIRED_GLOBALS.iter()
+        .map(|&(interface, needed)| GlobalStatus {
+            interface,
+            needed,
+            advertised: advertised.iter()
+                .filter(|(i, _)| i == interface)
+                .map(|&(_, v)| v)
+                .max(),
+        })
+        .collect()
+}
+
+/// Connects to the compositor and reports on every required global, for `--check-compat`.
+pub fn probe_required_globals() -> Result<Vec<GlobalStatus>> {
+    let conn = Connection::connect_to_env()
+        .context("could not connect to the Wayland compositor (is COSMIC running?)")?;
+    let (globals, _queue) = registry_queue_init::<RegistryProbe>(&conn)?;
+    let advertised: Vec<(String, u32)> = globals.contents().clone_list()
+        .into_iter()
+        .map(|g| (g.interface, g.version))
+        .collect();
+    Ok(required_globals_status(&advertised))
+}
+
 pub fn spawn_wayland_thread(
     scope: WorkspaceScope,
 ) -> Result<(Vec<ToplevelEntry>, mpsc::SyncSender<ActivateCommand>)> {
@@ -41,12 +108,16 @@ pub fn spawn_wayland_thread(
     let (cmd_tx, cmd_rx)   = mpsc::sync_channel(1);
 
     std::thread::spawn(move || {
-        if let Err(e) = wayland_thread_main(scope, list_tx, cmd_rx) {
-            log::error!("wayland thread: {e}");
+        if let Err(e) = wayland_thread_main(scope, &list_tx, cmd_rx) {
+            // Before the list is sent, main is still waiting in recv() and reports the
+            // error itself. After that the receiver is gone, so all we can do is log.
+            if let Err(mpsc::SendError(Err(e))) = list_tx.send(Err(e)) {
+                log::error!("wayland thread: {e}");
+            }
         }
     });
 
-    let toplevels = list_rx.recv()?;
+    let toplevels = list_rx.recv()??;
     Ok((toplevels, cmd_tx))
 }
 
@@ -63,6 +134,7 @@ struct AppData {
     // wl_output binds have been sent first. Deferred here and bound explicitly after the
     // registry listing is fully drained, rather than reactively as its Global arrives.
     toplevel_info_name: Option<u32>,
+    globals:            Vec<(String, u32)>,  // every (interface, version) advertised
 }
 
 struct Toplevel {
@@ -76,7 +148,7 @@ struct Toplevel {
 
 fn wayland_thread_main(
     scope:   WorkspaceScope,
-    list_tx: mpsc::SyncSender<Vec<ToplevelEntry>>,
+    list_tx: &mpsc::SyncSender<Result<Vec<ToplevelEntry>>>,
     cmd_rx:  mpsc::Receiver<ActivateCommand>,
 ) -> Result<()> {
     let conn    = Connection::connect_to_env()?;
@@ -94,6 +166,7 @@ fn wayland_thread_main(
         _workspace_manager: None,
         outputs: vec![],
         toplevel_info_name: None,
+        globals: vec![],
     };
 
     // First roundtrip: drain the full registry listing. wl_output/wl_seat/workspace-manager
@@ -102,13 +175,31 @@ fn wayland_thread_main(
     // appears.
     queue.roundtrip(&mut data)?;
 
+    // Without this, a missing global means an empty window list and a silent exit (or an
+    // overlay whose selection can't be activated), which looks like a bug in the switcher.
+    let missing: Vec<String> = required_globals_status(&data.globals).iter()
+        .filter(|s| !s.ok())
+        .map(ToString::to_string)
+        .collect();
+    if !missing.is_empty() {
+        return Err(anyhow!(
+            "cosmic-ext-app-switcher can't run: the compositor doesn't offer the Wayland \
+             interfaces it needs ({}). A COSMIC update may have removed or changed them, or \
+             the switcher is running inside a sandbox such as Flatpak. Run \
+             `cosmic-ext-app-switcher --check-compat` for details.",
+            missing.join("; "),
+        ));
+    }
+
     // Second roundtrip: force the server to fully process our wl_output bind requests
     // before we bind toplevel_info below — otherwise toplevel handles it creates may miss
     // their initial output_enter sync (see comment on toplevel_info_name).
     queue.roundtrip(&mut data)?;
 
     if let Some(name) = data.toplevel_info_name.take() {
-        data._info = Some(registry.bind::<ZcosmicToplevelInfoV1, _, _>(name, 1, &qh, ()));
+        data._info = Some(
+            registry.bind::<ZcosmicToplevelInfoV1, _, _>(name, TOPLEVEL_INFO_VERSION, &qh, ())
+        );
     }
 
     // Extra roundtrips over the original three: workspace-group/workspace handles and
@@ -167,7 +258,7 @@ fn wayland_thread_main(
         entries.len(), data.toplevels.len(), active_outputs.len(),
     );
 
-    list_tx.send(entries).ok();
+    list_tx.send(Ok(entries)).ok();
 
     match cmd_rx.recv() {
         Ok(ActivateCommand::Activate(key)) => {
@@ -197,22 +288,26 @@ impl Dispatch<wl_registry::WlRegistry, ()> for AppData {
         _: &Connection,
         qh: &QueueHandle<Self>,
     ) {
-        if let wl_registry::Event::Global { name, interface, .. } = event {
+        if let wl_registry::Event::Global { name, interface, version } = event {
+            data.globals.push((interface.clone(), version));
+            // A global offered below the version we bind is left unbound: binding it would
+            // be a protocol error that kills the connection before the required-globals
+            // check in wayland_thread_main can report it.
             match interface.as_str() {
-                "zcosmic_toplevel_info_v1" => {
+                "zcosmic_toplevel_info_v1" if version >= TOPLEVEL_INFO_VERSION => {
                     // Binding deferred until after wl_output is bound — see
                     // AppData::toplevel_info_name and wayland_thread_main.
                     data.toplevel_info_name = Some(name);
                 }
-                "zcosmic_toplevel_manager_v1" => {
-                    data.manager = Some(
-                        registry.bind::<ZcosmicToplevelManagerV1, _, _>(name, 1, qh, ())
-                    );
+                "zcosmic_toplevel_manager_v1" if version >= TOPLEVEL_MANAGER_VERSION => {
+                    data.manager = Some(registry.bind::<ZcosmicToplevelManagerV1, _, _>(
+                        name, TOPLEVEL_MANAGER_VERSION, qh, (),
+                    ));
                 }
-                "wl_seat" => {
+                "wl_seat" if version >= SEAT_VERSION => {
                     if data.seat.is_none() {
                         data.seat = Some(
-                            registry.bind::<wl_seat::WlSeat, _, _>(name, 7, qh, ())
+                            registry.bind::<wl_seat::WlSeat, _, _>(name, SEAT_VERSION, qh, ())
                         );
                     }
                 }
@@ -312,6 +407,16 @@ impl Dispatch<ZcosmicToplevelHandleV1, ()> for AppData {
     }
 }
 
+// --- Registry for probe_required_globals: registry_queue_init collects the global list
+// itself, so there's nothing to handle here ---
+
+struct RegistryProbe;
+
+impl Dispatch<wl_registry::WlRegistry, GlobalListContents> for RegistryProbe {
+    fn event(_: &mut Self, _: &wl_registry::WlRegistry, _: wl_registry::Event,
+             _: &GlobalListContents, _: &Connection, _: &QueueHandle<Self>) {}
+}
+
 // --- No-op dispatches for manager and seat ---
 
 impl Dispatch<ZcosmicToplevelManagerV1, ()> for AppData {
@@ -361,4 +466,55 @@ impl Dispatch<ZcosmicWorkspaceHandleV1, ()> for AppData {
     fn event(_: &mut Self, _: &ZcosmicWorkspaceHandleV1,
              _: zcosmic_workspace_handle_v1::Event, _: &(),
              _: &Connection, _: &QueueHandle<Self>) {}
+}
+
+#[cfg(test)]
+mod tests {
+    use super::required_globals_status;
+
+    fn advertised(globals: &[(&str, u32)]) -> Vec<(String, u32)> {
+        globals.iter().map(|&(i, v)| (i.to_string(), v)).collect()
+    }
+
+    fn line_for(globals: &[(&str, u32)], interface: &str) -> String {
+        required_globals_status(&advertised(globals)).iter()
+            .map(ToString::to_string)
+            .find(|l| l.starts_with(&format!("{interface}:")))
+            .unwrap()
+    }
+
+    #[test]
+    fn everything_offered_is_ok() {
+        let globals = [
+            ("zcosmic_toplevel_info_v1", 3),
+            ("zcosmic_toplevel_manager_v1", 4),
+            ("zwlr_layer_shell_v1", 5),
+            ("wl_seat", 9),
+        ];
+        assert!(required_globals_status(&advertised(&globals)).iter().all(|s| s.ok()));
+    }
+
+    #[test]
+    fn missing_global_is_reported() {
+        let globals = [("zcosmic_toplevel_info_v1", 3), ("zwlr_layer_shell_v1", 5), ("wl_seat", 9)];
+        let statuses = required_globals_status(&advertised(&globals));
+        assert_eq!(statuses.iter().filter(|s| !s.ok()).count(), 1);
+        assert_eq!(
+            line_for(&globals, "zcosmic_toplevel_manager_v1"),
+            "zcosmic_toplevel_manager_v1: NOT offered (needs v1)",
+        );
+    }
+
+    #[test]
+    fn version_below_the_one_we_bind_is_too_old() {
+        let globals = [("wl_seat", 5)];
+        assert_eq!(line_for(&globals, "wl_seat"), "wl_seat: TOO OLD (v5, needs v7)");
+    }
+
+    /// A seat advertised twice counts as its highest version.
+    #[test]
+    fn repeated_global_uses_highest_version() {
+        let globals = [("wl_seat", 5), ("wl_seat", 8)];
+        assert_eq!(line_for(&globals, "wl_seat"), "wl_seat: ok (v8, needs v7)");
+    }
 }
