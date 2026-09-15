@@ -59,10 +59,7 @@ impl Application for AppSwitcher {
         };
 
         let theme = theme_preset.values();
-        let n32 = toplevels.len() as u32;
-        let cell_w = (theme.icon_size as u32) + 20; // icon + 2 × cell-pad(10)
-        let surface_w = n32 * cell_w + (n32.saturating_sub(1)) * 4 + 36 + 40;
-        let surface_h = 160u32;
+        let (surface_w, surface_h) = crate::ui::surface_size(toplevels.len(), &theme);
 
         let surface_id = WindowId::unique();
         let layer_task = get_layer_surface::<cosmic::Action<Message>>(SctkLayerSurfaceSettings {

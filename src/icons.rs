@@ -17,15 +17,33 @@ pub enum AppIcon {
     File(PathBuf),
 }
 
-/// Resolves the icon for `app_id`, at the size it will be drawn at: the same name can
+/// How one window is presented in the strip.
+pub struct AppVisual {
+    pub icon: AppIcon,
+    /// What to print under the strip when this window is selected.
+    pub label: String,
+}
+
+/// Resolves what to draw for `app_id`, at the size the icon will be drawn at: a name can
 /// resolve at one size and not another, so the check has to use the size we'll render.
-pub fn icon_for(app_id: &str, size: u16) -> AppIcon {
-    // Steam games: the per-game icon isn't reliably resolvable, so use Steam's own.
+pub fn visual_for(app_id: &str, window_title: &str, size: u16) -> AppVisual {
+    // Steam games: the per-game icon isn't reliably resolvable, so use Steam's own. The
+    // window title is the game's name, which beats every other label we could pick.
     if app_id.starts_with("steam_app_") {
-        return resolve("steam", size);
+        return AppVisual {
+            icon: resolve("steam", size),
+            label: first_non_empty(&[window_title, "Steam"]).to_string(),
+        };
     }
 
-    match icon_field_for(app_id) {
+    let entry = desktop_entry_for(app_id);
+    let label = entry.as_ref()
+        .and_then(|e| e.name.as_deref())
+        .filter(|n| !n.is_empty())
+        .unwrap_or_else(|| first_non_empty(&[window_title, app_id, "Unknown"]))
+        .to_string();
+
+    let icon = match entry.and_then(|e| e.icon) {
         // An absolute Icon= that exists is the icon, no theme lookup involved.
         Some(field) if Path::new(&field).is_absolute() && Path::new(&field).is_file() => {
             AppIcon::File(PathBuf::from(field))
@@ -35,7 +53,13 @@ pub fn icon_for(app_id: &str, size: u16) -> AppIcon {
         Some(field) => resolve(&icon_name_from_field(&field), size),
         // No entry found: reverse-DNS app_ids often end in their own icon name.
         None => resolve(app_id.split('.').next_back().unwrap_or(app_id), size),
-    }
+    };
+
+    AppVisual { icon, label }
+}
+
+fn first_non_empty<'a>(candidates: &[&'a str]) -> &'a str {
+    candidates.iter().copied().find(|c| !c.is_empty()).unwrap_or_default()
 }
 
 /// Falls back to the generic icon if `name` isn't in the theme.
@@ -47,8 +71,14 @@ fn resolve(name: &str, size: u16) -> AppIcon {
     AppIcon::Named(FALLBACK_ICON.to_string())
 }
 
-/// The `Icon=` field of the `.desktop` entry describing `app_id`, if one can be found.
-fn icon_field_for(app_id: &str) -> Option<String> {
+/// The fields we use from a `.desktop` entry.
+struct DesktopInfo {
+    icon: Option<String>,
+    name: Option<String>,
+}
+
+/// The `.desktop` entry describing `app_id`, if one can be found.
+fn desktop_entry_for(app_id: &str) -> Option<DesktopInfo> {
     if app_id.is_empty() {
         return None;
     }
@@ -56,9 +86,8 @@ fn icon_field_for(app_id: &str) -> Option<String> {
 
     // Direct filename match: "firefox" -> "firefox.desktop"
     for dir in &dirs {
-        let path = dir.join(format!("{app_id}.desktop"));
-        if let Some(icon) = read_icon_field(&path) {
-            return Some(icon);
+        if let Some(info) = read_entry(&dir.join(format!("{app_id}.desktop"))) {
+            return Some(info);
         }
     }
 
@@ -71,9 +100,10 @@ fn icon_field_for(app_id: &str) -> Option<String> {
         let claims = entry.startup_wm_class().is_some_and(|c| c.eq_ignore_ascii_case(app_id))
             || stem_matches(stem, app_id);
         if claims {
-            if let Some(icon) = entry.icon() {
-                return Some(icon.to_string());
-            }
+            return Some(DesktopInfo {
+                icon: entry.icon().map(ToString::to_string),
+                name: entry.name(None).map(|n| n.to_string()),
+            });
         }
     }
 
@@ -89,11 +119,14 @@ fn stem_matches(stem: &str, app_id: &str) -> bool {
         || stem.rsplit('.').next().is_some_and(|last| last.eq_ignore_ascii_case(app_id))
 }
 
-fn read_icon_field(path: &Path) -> Option<String> {
+fn read_entry(path: &Path) -> Option<DesktopInfo> {
     let bytes = std::fs::read(path).ok()?;
     let s = std::str::from_utf8(&bytes).ok()?;
     let entry = DesktopEntry::decode(path, s).ok()?;
-    entry.icon().map(ToString::to_string)
+    Some(DesktopInfo {
+        icon: entry.icon().map(ToString::to_string),
+        name: entry.name(None).map(|n| n.to_string()),
+    })
 }
 
 /// Every directory that can hold `.desktop` files, in XDG precedence order.
@@ -142,7 +175,9 @@ fn icon_name_from_field(icon: &str) -> String {
 
 #[cfg(test)]
 mod tests {
-    use super::{AppIcon, FALLBACK_ICON, icon_for, icon_name_from_field, search_dirs, stem_matches};
+    use super::{
+        AppIcon, FALLBACK_ICON, icon_name_from_field, search_dirs, stem_matches, visual_for,
+    };
     use std::path::PathBuf;
 
     #[test]
@@ -198,20 +233,28 @@ mod tests {
         assert_eq!(deduped.len(), dirs.len(), "duplicate dirs in {dirs:?}");
 
         // An Icon= naming a file on disk is drawn from that file, by exact app_id and by
-        // the last component of the entry's name.
+        // the last component of the entry's name. The label is the entry's Name=, which
+        // beats the window title.
         for app_id in ["org.example.Thing", "thing"] {
-            match icon_for(app_id, 48) {
+            let visual = visual_for(app_id, "Some Window Title", 48);
+            match visual.icon {
                 AppIcon::File(p) => assert_eq!(p, icon, "for app_id {app_id:?}"),
                 AppIcon::Named(n) => panic!("app_id {app_id:?} resolved to name {n:?}"),
             }
+            assert_eq!(visual.label, "Thing", "for app_id {app_id:?}");
         }
 
         // An app_id nothing claims falls back to the generic icon rather than to a name
-        // that renders as an empty cell.
-        match icon_for("no-such-app-6f3b", 48) {
+        // that renders as an empty cell, and labels itself from the window title.
+        let visual = visual_for("no-such-app-6f3b", "Some Window Title", 48);
+        match visual.icon {
             AppIcon::Named(n) => assert_eq!(n, FALLBACK_ICON),
             AppIcon::File(p) => panic!("unknown app_id resolved to file {}", p.display()),
         }
+        assert_eq!(visual.label, "Some Window Title");
+
+        // With nothing else to go on, the app_id is still better than a blank line.
+        assert_eq!(visual_for("no-such-app-6f3b", "", 48).label, "no-such-app-6f3b");
 
         std::fs::remove_dir_all(&root).ok();
     }
