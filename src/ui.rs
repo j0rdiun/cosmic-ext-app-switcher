@@ -1,24 +1,23 @@
-use cosmic::{
-    iced::{
-        Alignment, Border, Color, Length, Shadow, Vector,
-        Background,
-        widget::container::Style as ContainerStyle,
-    },
-    widget::{column, container, row, mouse_area, text},
-    widget::icon,
-    Element,
-};
 use crate::app::{AppSwitcher, Message};
 use crate::icons::{AppIcon, visual_for};
+use cosmic::{
+    Element,
+    iced::{
+        Alignment, Background, Border, Color, Length, Shadow, Vector,
+        widget::container::Style as ContainerStyle,
+    },
+    widget::icon,
+    widget::{column, container, mouse_area, row, text},
+};
 use switcher_config::ThemeValues;
 
-const CELL_PAD:     u16 = 10;
+const CELL_PAD: u16 = 10;
 const CELL_SPACING: u16 = 4;
-const STRIP_PAD_X:  u16 = 18;
-const STRIP_PAD_Y:  u16 = 14;
-const TITLE_SIZE:   u16 = 14;
+const STRIP_PAD_X: u16 = 18;
+const STRIP_PAD_Y: u16 = 14;
+const TITLE_SIZE: u16 = 14;
 const TITLE_HEIGHT: u16 = 20;
-const TITLE_GAP:    u16 = 6;
+const TITLE_GAP: u16 = 6;
 /// Breathing room around the strip, so its shadow isn't clipped by the surface edge.
 const SURFACE_MARGIN: u32 = 40;
 
@@ -27,10 +26,10 @@ const SURFACE_MARGIN: u32 = 40;
 pub fn surface_size(window_count: usize, theme: &ThemeValues) -> (u32, u32) {
     let n = window_count as u32;
     let cell = u32::from(theme.icon_size) + 2 * u32::from(CELL_PAD);
-    let strip_w = n * cell + n.saturating_sub(1) * u32::from(CELL_SPACING)
-        + 2 * u32::from(STRIP_PAD_X);
-    let strip_h = cell + u32::from(TITLE_GAP) + u32::from(TITLE_HEIGHT)
-        + 2 * u32::from(STRIP_PAD_Y);
+    let strip_w =
+        n * cell + n.saturating_sub(1) * u32::from(CELL_SPACING) + 2 * u32::from(STRIP_PAD_X);
+    let strip_h =
+        cell + u32::from(TITLE_GAP) + u32::from(TITLE_HEIGHT) + 2 * u32::from(STRIP_PAD_Y);
     (strip_w + SURFACE_MARGIN, strip_h + SURFACE_MARGIN)
 }
 
@@ -49,16 +48,22 @@ fn fit_title(title: &str, surface_w: u32) -> String {
     format!("{}…", kept.trim_end())
 }
 
-pub fn view(state: &AppSwitcher) -> Element<Message> {
+pub fn view(state: &AppSwitcher) -> Element<'_, Message> {
     let tv = &state.theme;
-    let bg       = Color::from_rgba(tv.bg[0],          tv.bg[1],          tv.bg[2],          tv.bg[3]);
-    let sel_bg   = Color::from_rgba(tv.selected_bg[0], tv.selected_bg[1], tv.selected_bg[2], tv.selected_bg[3]);
-    let corner   = tv.corner_radius;
-    let icon_sz  = tv.icon_size;
+    let bg = Color::from_rgba(tv.bg[0], tv.bg[1], tv.bg[2], tv.bg[3]);
+    let sel_bg = Color::from_rgba(
+        tv.selected_bg[0],
+        tv.selected_bg[1],
+        tv.selected_bg[2],
+        tv.selected_bg[3],
+    );
+    let corner = tv.corner_radius;
+    let icon_sz = tv.icon_size;
 
     let mut selected_label = String::new();
 
-    let cells: Vec<Element<Message>> = state.toplevels
+    let cells: Vec<Element<Message>> = state
+        .toplevels
         .iter()
         .enumerate()
         .map(|(i, entry)| {
@@ -74,9 +79,7 @@ pub fn view(state: &AppSwitcher) -> Element<Message> {
                     .icon()
                     .size(icon_sz)
                     .into(),
-                AppIcon::File(path) => icon::icon(icon::from_path(path))
-                    .size(icon_sz)
-                    .into(),
+                AppIcon::File(path) => icon::icon(icon::from_path(path)).size(icon_sz).into(),
             };
 
             let cell = container(app_icon)
@@ -117,7 +120,7 @@ pub fn view(state: &AppSwitcher) -> Element<Message> {
             title,
         ]
         .spacing(TITLE_GAP)
-        .align_x(Alignment::Center)
+        .align_x(Alignment::Center),
     )
     .style(move |_: &cosmic::Theme| ContainerStyle {
         background: Some(Background::Color(bg)),
@@ -127,7 +130,12 @@ pub fn view(state: &AppSwitcher) -> Element<Message> {
             color: Color::TRANSPARENT,
         },
         shadow: Shadow {
-            color: Color { r: 0.0, g: 0.0, b: 0.0, a: 0.6 },
+            color: Color {
+                r: 0.0,
+                g: 0.0,
+                b: 0.0,
+                a: 0.6,
+            },
             offset: Vector::new(0.0, 8.0),
             blur_radius: 32.0,
         },
@@ -143,7 +151,7 @@ pub fn view(state: &AppSwitcher) -> Element<Message> {
 
 #[cfg(test)]
 mod tests {
-    use super::{fit_title, surface_size, TITLE_HEIGHT, TITLE_GAP};
+    use super::{TITLE_GAP, TITLE_HEIGHT, fit_title, surface_size};
     use switcher_config::Theme;
 
     #[test]
@@ -162,7 +170,10 @@ mod tests {
         let theme = Theme::Dark.values();
         let (_, with_title) = surface_size(3, &theme);
         let icons_only = u32::from(theme.icon_size) + 20 + 28 + 40;
-        assert_eq!(with_title, icons_only + u32::from(TITLE_HEIGHT) + u32::from(TITLE_GAP));
+        assert_eq!(
+            with_title,
+            icons_only + u32::from(TITLE_HEIGHT) + u32::from(TITLE_GAP)
+        );
     }
 
     /// Width still tracks the window count, as the strip grows sideways.

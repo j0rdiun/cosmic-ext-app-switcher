@@ -106,6 +106,9 @@ else
 fi
 install -m755 "$TMPFILE" "$INSTALL_DIR/$BINARY"
 echo "Installed: $INSTALL_DIR/$BINARY"
+# The switcher stays resident to maintain MRU state. Retire an older installed
+# instance; the next shortcut press starts this newly installed binary.
+pkill -f "^$INSTALL_DIR/$BINARY( |$)" 2>/dev/null || true
 
 # ── Download and install applet ───────────────────────────────────────────────
 if [ -n "$APPLET_URL" ]; then
