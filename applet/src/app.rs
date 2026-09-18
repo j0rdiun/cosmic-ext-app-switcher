@@ -270,7 +270,7 @@ impl Application for AppletApp {
         Task::none()
     }
 
-    fn view(&self) -> Element<Message> {
+    fn view(&self) -> Element<'_, Message> {
         let mut handle = cosmic::widget::icon::from_svg_bytes(
             include_bytes!("../data/io.github.cosmic-ext-applet-app-switcher-symbolic.svg")
                 as &'static [u8],
@@ -283,7 +283,7 @@ impl Application for AppletApp {
             .into()
     }
 
-    fn view_window(&self, _id: WindowId) -> Element<Message> {
+    fn view_window(&self, _id: WindowId) -> Element<'_, Message> {
         let swatches: Vec<Element<Message>> = Theme::all()
             .into_iter()
             .map(|t| {

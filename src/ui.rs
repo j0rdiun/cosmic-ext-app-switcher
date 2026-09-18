@@ -49,7 +49,7 @@ fn fit_title(title: &str, surface_w: u32) -> String {
     format!("{}…", kept.trim_end())
 }
 
-pub fn view(state: &AppSwitcher) -> Element<Message> {
+pub fn view(state: &AppSwitcher) -> Element<'_, Message> {
     let tv = &state.theme;
     let bg       = Color::from_rgba(tv.bg[0],          tv.bg[1],          tv.bg[2],          tv.bg[3]);
     let sel_bg   = Color::from_rgba(tv.selected_bg[0], tv.selected_bg[1], tv.selected_bg[2], tv.selected_bg[3]);
