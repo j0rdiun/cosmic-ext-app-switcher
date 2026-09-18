@@ -120,7 +120,7 @@ make check-compat   # verify COSMIC environment is compatible
 
 COSMIC's compositor (`cosmic-comp`) lets you override the `WindowSwitcher` action by pointing a config file at any binary. The scripts detect the config path automatically — if COSMIC updates and moves to a new config version, it still works.
 
-Each key press launches the binary fresh. The first invocation creates a layer-shell overlay and binds a Unix socket. Subsequent presses (while the modifier is held) connect to that socket and send a `next`/`prev` signal — the running instance advances the selection and re-renders. Releasing the modifier triggers window activation via `zcosmic_toplevel_manager_v1`.
+The first key press starts a resident process, creates a layer-shell overlay, and binds a Unix socket. The process keeps its Wayland connection open after the overlay closes and tracks every compositor-reported window activation, producing normal most-recently-used ordering on later invocations. Subsequent key presses connect to the socket: while the overlay is open they cycle the selection; otherwise they open a new overlay from the current MRU snapshot. Releasing the modifier triggers window activation via `zcosmic_toplevel_manager_v1`. Theme and workspace-scope settings are reloaded whenever an overlay opens.
 
 **Wayland protocols used:**
 - `zcosmic_toplevel_info_v1` — enumerate open windows
@@ -167,7 +167,7 @@ GitHub Actions will build binaries for x86_64 and aarch64 and publish a release 
 
 ## Requirements
 
-- Pop!_OS with COSMIC desktop
+- Pop!_OS or Fedora with COSMIC desktop
 - x86_64 or aarch64 architecture
 
 Building from source additionally requires `libxkbcommon-dev` and Rust.
