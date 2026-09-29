@@ -196,8 +196,12 @@ impl Application for AppSwitcher {
                     _ => {}
                 },
                 keyboard::Event::ModifiersChanged(mods) => {
-                    let activate =
-                        (self.super_held && !mods.logo()) || (self.alt_held && !mods.alt());
+                    let activate = switching_modifiers_released(
+                        self.super_held,
+                        self.alt_held,
+                        mods.logo(),
+                        mods.alt(),
+                    );
                     self.super_held = mods.logo();
                     self.alt_held = mods.alt();
                     if activate {
@@ -260,6 +264,34 @@ impl Application for AppSwitcher {
 
     fn view_window(&self, _id: WindowId) -> Element<'_, Message> {
         crate::ui::view(self)
+    }
+}
+
+// A new layer surface can briefly report both modifiers held. Keep it open
+// until neither switching modifier is held.
+fn switching_modifiers_released(
+    previous_logo: bool,
+    previous_alt: bool,
+    logo: bool,
+    alt: bool,
+) -> bool {
+    (previous_logo || previous_alt) && !logo && !alt
+}
+
+#[cfg(test)]
+mod tests {
+    use super::switching_modifiers_released;
+
+    #[test]
+    fn releasing_logo_while_alt_is_held_keeps_switcher_open() {
+        assert!(!switching_modifiers_released(true, true, false, true));
+    }
+
+    #[test]
+    fn releasing_last_switching_modifier_activates() {
+        assert!(switching_modifiers_released(false, true, false, false));
+        assert!(switching_modifiers_released(true, false, false, false));
+        assert!(switching_modifiers_released(true, true, false, false));
     }
 }
 
