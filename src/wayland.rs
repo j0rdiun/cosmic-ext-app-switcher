@@ -26,7 +26,6 @@ use switcher_config::WorkspaceScope;
 pub struct ToplevelEntry {
     pub app_id:     String,
     pub title:      String,
-    pub is_active:  bool,
     pub handle_key: usize,
 }
 
@@ -248,7 +247,6 @@ fn wayland_thread_main(
         .map(|(i, t)| ToplevelEntry {
             app_id:     t.app_id.clone(),
             title:      t.title.clone(),
-            is_active:  t.is_active,
             handle_key: i,
         })
         .collect();
