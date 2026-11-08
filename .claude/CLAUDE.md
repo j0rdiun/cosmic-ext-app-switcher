@@ -46,6 +46,15 @@ make install                 # builds + installs to ~/.local/bin/ + enables shor
 
 cosmic-comp watches this file and reloads live on change.
 
+Super+Tab and Alt+Tab both route through the single `WindowSwitcher` system action, so they
+can only differ via the sibling `custom` file, which holds key bindings rather than action
+overrides. `shortcuts()` in cosmic-settings-daemon builds the map as `defaults.extend(custom)`,
+and `Binding`'s `Eq`/`Hash` cover only modifiers + key (not `description`/`keycode`), so
+`(modifiers: [Alt], key: "Tab"): Spawn("<binary> --scope current-monitor")` replaces the
+default `System(WindowSwitcher)` binding for those keys. The shipped originals are in
+`/usr/share/cosmic/com.system76.CosmicSettings.Shortcuts/v1/defaults`. This is what the
+`--scope` flag (#7) is for; the README documents the recipe.
+
 ## Key dependencies
 
 - `libcosmic` (git, pop-os/libcosmic, rev `417923f`) — features: `wayland`, `tokio`, `winit`, `multi-window`

@@ -95,6 +95,30 @@ make uninstall
 
 ---
 
+## Which windows are listed
+
+By default the switcher lists every window. The panel applet can narrow that to the monitor you're working on, and `--scope` overrides the applet setting for one invocation:
+
+```bash
+cosmic-ext-app-switcher --scope all              # every window (default)
+cosmic-ext-app-switcher --scope current-monitor  # only this monitor's windows
+```
+
+### Different scopes for Alt+Tab and Super+Tab
+
+COSMIC routes both shortcuts through the same `WindowSwitcher` action, so they can't differ on their own. Giving Alt+Tab its own scope means binding it to a command instead, in `~/.config/cosmic/com.system76.CosmicSettings.Shortcuts/v1/custom`:
+
+```ron
+    (modifiers: [Alt], key: "Tab"): Spawn("/home/YOU/.local/bin/cosmic-ext-app-switcher --scope current-monitor"),
+    (modifiers: [Alt, Shift], key: "Tab"): Spawn("/home/YOU/.local/bin/cosmic-ext-app-switcher --scope current-monitor --reverse"),
+```
+
+Add those inside the existing `{ }`, with your own home directory in the paths. A custom binding overrides COSMIC's default for the same keys, and cosmic-comp reloads the file as you save it. Super+Tab keeps using the applet's setting.
+
+One limit: the scope belongs to the switcher that's already open. Holding Alt and pressing Tab again cycles the open switcher rather than reopening it, so a second shortcut with a different scope only takes effect once you've released the first.
+
+---
+
 ## Panel applet
 
 > **Tip:** After installing, right-click your COSMIC panel → **Edit Panel** → **Add Applet** → search for **App Switcher Settings** and add it. This gives you a one-click toggle and theme picker directly in your panel.
