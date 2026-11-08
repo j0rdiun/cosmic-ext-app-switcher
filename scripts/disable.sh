@@ -32,4 +32,7 @@ fi
 # cosmic-comp keeps parsing the file and restores its built-in switcher.
 shortcut_unregister "$CONFIG"
 
+# The switcher remains resident between invocations to track MRU focus history.
+pkill -f "^$HOME/.local/bin/cosmic-ext-app-switcher( |$)" 2>/dev/null || true
+
 echo "Disabled. COSMIC default switcher restored."

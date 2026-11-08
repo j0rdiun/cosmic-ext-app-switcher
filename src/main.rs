@@ -5,10 +5,10 @@ mod wayland;
 
 use anyhow::Result;
 use clap::Parser;
+use cosmic::cosmic_config::ConfigGet;
 use std::io::Write;
 use std::os::unix::net::UnixStream;
-use cosmic::cosmic_config::ConfigGet;
-use switcher_config::{Theme, WorkspaceScope, APP_ID, CONFIG_VERSION};
+use switcher_config::{APP_ID, CONFIG_VERSION, Theme, WorkspaceScope};
 
 pub fn socket_path() -> std::path::PathBuf {
     let dir = std::env::var("XDG_RUNTIME_DIR").unwrap_or_else(|_| "/tmp".to_string());
@@ -50,7 +50,7 @@ impl From<ScopeArg> for WorkspaceScope {
     }
 }
 
-fn load_theme() -> Theme {
+pub(crate) fn load_theme() -> Theme {
     use cosmic::cosmic_config::Config;
     Config::new(APP_ID, CONFIG_VERSION)
         .ok()
@@ -58,7 +58,7 @@ fn load_theme() -> Theme {
         .unwrap_or_default()
 }
 
-fn load_scope() -> WorkspaceScope {
+pub(crate) fn load_scope() -> WorkspaceScope {
     use cosmic::cosmic_config::Config;
     Config::new(APP_ID, CONFIG_VERSION)
         .ok()
@@ -87,7 +87,11 @@ fn main() -> Result<()> {
     }
 
     // If a switcher is already running, signal it to cycle and exit.
-    let cmd = if args.reverse { b"prev" as &[u8] } else { b"next" as &[u8] };
+    let cmd = if args.reverse {
+        b"prev" as &[u8]
+    } else {
+        b"next" as &[u8]
+    };
     if let Ok(mut s) = UnixStream::connect(socket_path()) {
         let _ = s.write_all(cmd);
         return Ok(());
@@ -101,9 +105,6 @@ fn main() -> Result<()> {
     // every window while another lists only this monitor's (#7).
     let scope = args.scope.map_or_else(load_scope, WorkspaceScope::from);
     let (toplevels, cmd_tx) = wayland::spawn_wayland_thread(scope)?;
-    if toplevels.is_empty() {
-        return Ok(());
-    }
 
     app::run(toplevels, args.reverse, cmd_tx, theme)
 }

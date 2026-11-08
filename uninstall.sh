@@ -48,6 +48,8 @@ else
 fi
 
 # ── Remove binaries ───────────────────────────────────────────────────────────
+# Stop the resident MRU tracker before removing its executable.
+pkill -f "^$INSTALL_DIR/$BINARY( |$)" 2>/dev/null || true
 REMOVED=0
 if [ -f "$INSTALL_DIR/$BINARY" ]; then
     rm -f "$INSTALL_DIR/$BINARY"

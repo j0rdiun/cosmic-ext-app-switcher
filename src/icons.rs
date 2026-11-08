@@ -37,7 +37,8 @@ pub fn visual_for(app_id: &str, window_title: &str, size: u16) -> AppVisual {
     }
 
     let entry = desktop_entry_for(app_id);
-    let label = entry.as_ref()
+    let label = entry
+        .as_ref()
         .and_then(|e| e.name.as_deref())
         .filter(|n| !n.is_empty())
         .unwrap_or_else(|| first_non_empty(&[window_title, app_id, "Unknown"]))
@@ -59,7 +60,11 @@ pub fn visual_for(app_id: &str, window_title: &str, size: u16) -> AppVisual {
 }
 
 fn first_non_empty<'a>(candidates: &[&'a str]) -> &'a str {
-    candidates.iter().copied().find(|c| !c.is_empty()).unwrap_or_default()
+    candidates
+        .iter()
+        .copied()
+        .find(|c| !c.is_empty())
+        .unwrap_or_default()
 }
 
 /// Falls back to the generic icon if `name` isn't in the theme.
@@ -93,11 +98,22 @@ fn desktop_entry_for(app_id: &str) -> Option<DesktopInfo> {
 
     // Otherwise scan every entry for one that claims this app_id.
     for path in DesktopIter::new(dirs.clone()) {
-        let Ok(bytes) = std::fs::read(&path) else { continue };
-        let Ok(s) = std::str::from_utf8(&bytes) else { continue };
-        let Ok(entry) = DesktopEntry::decode(&path, s) else { continue };
-        let stem = path.file_stem().and_then(|s| s.to_str()).unwrap_or_default();
-        let claims = entry.startup_wm_class().is_some_and(|c| c.eq_ignore_ascii_case(app_id))
+        let Ok(bytes) = std::fs::read(&path) else {
+            continue;
+        };
+        let Ok(s) = std::str::from_utf8(&bytes) else {
+            continue;
+        };
+        let Ok(entry) = DesktopEntry::decode(&path, s) else {
+            continue;
+        };
+        let stem = path
+            .file_stem()
+            .and_then(|s| s.to_str())
+            .unwrap_or_default();
+        let claims = entry
+            .startup_wm_class()
+            .is_some_and(|c| c.eq_ignore_ascii_case(app_id))
             || stem_matches(stem, app_id);
         if claims {
             return Some(DesktopInfo {
@@ -116,7 +132,10 @@ fn desktop_entry_for(app_id: &str) -> Option<DesktopInfo> {
 /// (app_id "jdownloader" for "org.jdownloader.JDownloader.desktop").
 fn stem_matches(stem: &str, app_id: &str) -> bool {
     stem.eq_ignore_ascii_case(app_id)
-        || stem.rsplit('.').next().is_some_and(|last| last.eq_ignore_ascii_case(app_id))
+        || stem
+            .rsplit('.')
+            .next()
+            .is_some_and(|last| last.eq_ignore_ascii_case(app_id))
 }
 
 fn read_entry(path: &Path) -> Option<DesktopInfo> {
@@ -155,7 +174,9 @@ fn search_dirs() -> Vec<PathBuf> {
     ];
 
     let mut seen = HashSet::new();
-    xdg.chain(extra).filter(|d| seen.insert(d.clone())).collect()
+    xdg.chain(extra)
+        .filter(|d| seen.insert(d.clone()))
+        .collect()
 }
 
 // If the Icon= field in a .desktop file is an absolute path, extract the stem
@@ -182,7 +203,10 @@ mod tests {
 
     #[test]
     fn absolute_icon_fields_become_stems() {
-        assert_eq!(icon_name_from_field("/a/b/steam_icon_480.png"), "steam_icon_480");
+        assert_eq!(
+            icon_name_from_field("/a/b/steam_icon_480.png"),
+            "steam_icon_480"
+        );
         assert_eq!(icon_name_from_field("firefox"), "firefox");
     }
 
@@ -205,7 +229,10 @@ mod tests {
         std::fs::write(&icon, b"not really a png").unwrap();
         std::fs::write(
             apps.join("org.example.Thing.desktop"),
-            format!("[Desktop Entry]\nType=Application\nName=Thing\nIcon={}\n", icon.display()),
+            format!(
+                "[Desktop Entry]\nType=Application\nName=Thing\nIcon={}\n",
+                icon.display()
+            ),
         )
         .unwrap();
 
@@ -225,7 +252,11 @@ mod tests {
             root.join("data_home/flatpak/exports/share/applications"),
             PathBuf::from("/var/lib/snapd/desktop/applications"),
         ] {
-            assert!(dirs.contains(&expected), "missing {} in {dirs:?}", expected.display());
+            assert!(
+                dirs.contains(&expected),
+                "missing {} in {dirs:?}",
+                expected.display()
+            );
         }
         let mut deduped = dirs.clone();
         deduped.sort();
@@ -254,7 +285,10 @@ mod tests {
         assert_eq!(visual.label, "Some Window Title");
 
         // With nothing else to go on, the app_id is still better than a blank line.
-        assert_eq!(visual_for("no-such-app-6f3b", "", 48).label, "no-such-app-6f3b");
+        assert_eq!(
+            visual_for("no-such-app-6f3b", "", 48).label,
+            "no-such-app-6f3b"
+        );
 
         std::fs::remove_dir_all(&root).ok();
     }

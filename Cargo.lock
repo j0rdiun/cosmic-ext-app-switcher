@@ -1046,6 +1046,7 @@ dependencies = [
  "cosmic-protocols",
  "env_logger",
  "freedesktop-desktop-entry",
+ "libc",
  "libcosmic",
  "log",
  "switcher-config",

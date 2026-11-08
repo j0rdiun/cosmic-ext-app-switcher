@@ -26,6 +26,7 @@ install: build
 	install -Dm755 $(APPLET_BIN) $(INSTALL_DIR)/$(APPLET)
 	install -Dm644 $(DESKTOP) $(APPS_DIR)/io.github.cosmic-ext-applet-app-switcher.desktop
 	install -Dm644 $(ICON_SRC) $(ICONS_DIR)/io.github.cosmic-ext-applet-app-switcher-symbolic.svg
+	@pkill -f '^$(INSTALL_DIR)/$(SWITCHER)( |$$)' 2>/dev/null || true
 	@$(MAKE) enable
 	@echo ""
 	@echo "Installed and enabled. Press Super+Tab or Alt+Tab to try it."
@@ -33,6 +34,7 @@ install: build
 
 uninstall:
 	@$(MAKE) disable
+	@pkill -f '^$(INSTALL_DIR)/$(SWITCHER)( |$$)' 2>/dev/null || true
 	@rm -f $(INSTALL_DIR)/$(SWITCHER)
 	@rm -f $(INSTALL_DIR)/$(APPLET)
 	@rm -f $(APPS_DIR)/io.github.cosmic-ext-applet-app-switcher.desktop
