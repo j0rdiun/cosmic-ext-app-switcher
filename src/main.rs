@@ -30,9 +30,7 @@ pub struct Args {
     pub check_compat: bool,
 }
 
-/// The scopes worth offering on the command line. `CurrentWorkspace` is deliberately absent
-/// for the same reason the applet's picker hides it: it's a no-op until the
-/// ext_foreign_toplevel_list_v1 migration lands.
+/// The scopes offered on the command line, named for what users see.
 #[derive(Copy, Clone, Debug, PartialEq, Eq, clap::ValueEnum)]
 pub enum ScopeArg {
     /// Every window, on every workspace and monitor
@@ -50,19 +48,11 @@ impl From<ScopeArg> for WorkspaceScope {
     }
 }
 
-fn load_theme() -> Theme {
+fn load<T: switcher_config::DeserializeOwned + Default>(key: &str) -> T {
     use cosmic::cosmic_config::Config;
     Config::new(APP_ID, CONFIG_VERSION)
         .ok()
-        .and_then(|c| c.get::<Theme>("theme").ok())
-        .unwrap_or_default()
-}
-
-fn load_scope() -> WorkspaceScope {
-    use cosmic::cosmic_config::Config;
-    Config::new(APP_ID, CONFIG_VERSION)
-        .ok()
-        .and_then(|c| c.get::<WorkspaceScope>("workspace_scope").ok())
+        .and_then(|c| c.get::<T>(key).ok())
         .unwrap_or_default()
 }
 
@@ -96,10 +86,10 @@ fn main() -> Result<()> {
     // We are the first instance. Clean up any stale socket from a crash.
     let _ = std::fs::remove_file(socket_path());
 
-    let theme = load_theme();
+    let theme = load::<Theme>("theme");
     // A --scope on the command line beats the applet's setting, so one binding can list
     // every window while another lists only this monitor's (#7).
-    let scope = args.scope.map_or_else(load_scope, WorkspaceScope::from);
+    let scope = args.scope.map_or_else(|| load("workspace_scope"), WorkspaceScope::from);
     let (toplevels, cmd_tx) = wayland::spawn_wayland_thread(scope)?;
     if toplevels.is_empty() {
         return Ok(());

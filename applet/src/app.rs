@@ -288,8 +288,8 @@ impl Application for AppletApp {
             .into_iter()
             .map(|t| {
                 let preview_bg = {
-                    let p = t.preview_bg();
-                    Color::from_rgb(p[0], p[1], p[2])
+                    let [r, g, b, _] = t.values().bg;
+                    Color::from_rgb(r, g, b)
                 };
                 let selected = t == self.current_theme;
                 let label = t.label().to_string();

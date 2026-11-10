@@ -1,4 +1,5 @@
 use serde::{Deserialize, Serialize};
+pub use serde::de::DeserializeOwned;
 
 pub const APP_ID: &str = "io.github.cosmic-ext-app-switcher";
 pub const CONFIG_VERSION: u64 = 1;
@@ -17,7 +18,6 @@ pub struct ThemeValues {
     pub bg:            [f32; 4],
     pub selected_bg:   [f32; 4],
     pub corner_radius: f32,
-    pub icon_size:     u16,
     /// Colour of the window-title line under the strip.
     pub fg:            [f32; 4],
 }
@@ -29,28 +29,24 @@ impl Theme {
                 bg:            [0.13, 0.13, 0.13, 0.92],
                 selected_bg:   [1.0,  1.0,  1.0,  0.25],
                 corner_radius: 14.0,
-                icon_size:     60,
                 fg:            [0.92, 0.92, 0.92, 1.0],
             },
             Theme::Light => ThemeValues {
                 bg:            [0.95, 0.95, 0.95, 0.88],
                 selected_bg:   [0.0,  0.0,  0.0,  0.12],
                 corner_radius: 14.0,
-                icon_size:     60,
                 fg:            [0.13, 0.13, 0.13, 1.0],
             },
             Theme::Frosted => ThemeValues {
                 bg:            [0.15, 0.15, 0.15, 0.60],
                 selected_bg:   [1.0,  1.0,  1.0,  0.18],
                 corner_radius: 18.0,
-                icon_size:     60,
                 fg:            [0.95, 0.95, 0.95, 1.0],
             },
             Theme::Midnight => ThemeValues {
                 bg:            [0.05, 0.07, 0.15, 0.95],
                 selected_bg:   [0.40, 0.60, 1.0,  0.30],
                 corner_radius: 14.0,
-                icon_size:     60,
                 fg:            [0.88, 0.91, 1.0,  1.0],
             },
         }
@@ -68,18 +64,12 @@ impl Theme {
     pub fn all() -> [Theme; 4] {
         [Theme::Dark, Theme::Light, Theme::Frosted, Theme::Midnight]
     }
-
-    pub fn preview_bg(&self) -> [f32; 3] {
-        let v = self.values();
-        [v.bg[0], v.bg[1], v.bg[2]]
-    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
 pub enum WorkspaceScope {
     #[default]
     AllWorkspaces,
-    CurrentWorkspace,
     CurrentOutput,
 }
 
@@ -87,16 +77,10 @@ impl WorkspaceScope {
     pub fn label(&self) -> &str {
         match self {
             WorkspaceScope::AllWorkspaces   => "All workspaces",
-            WorkspaceScope::CurrentWorkspace => "Current workspace",
             WorkspaceScope::CurrentOutput    => "Current monitor",
         }
     }
 
-    // CurrentWorkspace is intentionally excluded: cosmic-comp never sends the legacy
-    // workspace_enter/workspace_leave events this project's protocol binding relies on,
-    // so it's currently a no-op (see src/wayland.rs). Left defined for a future migration
-    // to ext_foreign_toplevel_list_v1 + ext_workspace_enter/leave, but hidden from the
-    // picker so it doesn't look like a working option that silently does nothing.
     pub fn all() -> [WorkspaceScope; 2] {
         [WorkspaceScope::AllWorkspaces, WorkspaceScope::CurrentOutput]
     }

@@ -8,7 +8,7 @@ DESKTOP     := applet/data/io.github.cosmic-ext-applet-app-switcher.desktop
 ICON_SRC    := applet/data/io.github.cosmic-ext-applet-app-switcher-symbolic.svg
 ICONS_DIR   := $(HOME)/.local/share/icons/hicolor/scalable/apps
 
-.PHONY: all build install uninstall enable disable status reinstall check-compat
+.PHONY: all build install uninstall enable disable status check-compat
 
 all: build
 
@@ -47,8 +47,6 @@ disable:
 
 status:
 	@bash scripts/status.sh
-
-reinstall: uninstall install
 
 check-compat:
 	@echo "Checking compatibility..."
