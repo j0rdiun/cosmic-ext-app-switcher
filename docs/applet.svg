@@ -1,0 +1,41 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 460 310" width="460" height="310" role="img" aria-labelledby="t d">
+  <title id="t">App Switcher Settings applet</title>
+  <desc id="d">The panel applet popup: a Super+Tab shortcut toggle, four theme swatches with Midnight selected, and two scope options with All workspaces selected.</desc>
+  <defs>
+    <filter id="shadow" x="-10%" y="-10%" width="120%" height="130%"><feDropShadow dx="0" dy="6" stdDeviation="8" flood-color="#000" flood-opacity="0.5"/></filter>
+  </defs>
+  <g font-family="'Inter','Segoe UI',Helvetica,Arial,sans-serif" fill="#e6e6ea">
+    <rect x="10" y="10" width="440" height="280" rx="14" fill="#1c1b22" filter="url(#shadow)"/>
+    <rect x="10.5" y="10.5" width="439" height="279" rx="14" fill="none" stroke="#fff" stroke-opacity="0.12"/>
+
+    <text x="34" y="52" font-size="15">Super+Tab shortcut</text>
+    <rect x="374" y="34" width="52" height="28" rx="14" fill="#6194ff"/>
+    <circle cx="412" cy="48" r="10" fill="#1c1b22"/>
+
+    <rect x="26" y="80" width="408" height="1" fill="#fff" fill-opacity="0.14"/>
+
+    <text x="230" y="108" font-size="15" text-anchor="middle">Theme</text>
+    <g stroke="#fff" stroke-opacity="0.06">
+      <rect x="76.5" y="122.5" width="67" height="39" rx="6" fill="#212121"/>
+      <rect x="156.5" y="122.5" width="67" height="39" rx="6" fill="#f2f2f2" stroke="none"/>
+      <rect x="236.5" y="122.5" width="67" height="39" rx="6" fill="#262626"/>
+    </g>
+    <rect x="316" y="122" width="68" height="40" rx="6" fill="#0d1226" stroke="#6194ff" stroke-width="2.5"/>
+    <g font-size="11" text-anchor="middle" fill="#cfcfd6">
+      <text x="110" y="182">Dark</text>
+      <text x="190" y="182">Light</text>
+      <text x="270" y="182">Frosted</text>
+      <text x="350" y="182">Midnight</text>
+    </g>
+
+    <rect x="26" y="202" width="408" height="1" fill="#fff" fill-opacity="0.14"/>
+
+    <text x="230" y="230" font-size="15" text-anchor="middle">Switch scope</text>
+    <rect x="120" y="244" width="104" height="28" rx="6" fill="none" stroke="#6194ff" stroke-width="2"/>
+    <rect x="232.5" y="244.5" width="110" height="27" rx="6" fill="none" stroke="#fff" stroke-opacity="0.15"/>
+    <g font-size="12" text-anchor="middle">
+      <text x="172" y="263">All workspaces</text>
+      <text x="287.5" y="263">Current monitor</text>
+    </g>
+  </g>
+</svg>

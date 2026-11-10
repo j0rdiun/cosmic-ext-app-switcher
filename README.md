@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="docs/banner.svg" alt="cosmic-ext-app-switcher: a horizontal Super+Tab app switcher for COSMIC" width="100%"/>
+</p>
+
 # cosmic-ext-app-switcher
 
 A macOS-style horizontal app switcher for the [COSMIC desktop](https://system76.com/cosmic) on Pop!_OS — replacing the default vertical Super+Tab list with a compact icon strip centered on screen.
@@ -5,11 +9,11 @@ A macOS-style horizontal app switcher for the [COSMIC desktop](https://system76.
 <table align="center">
   <tr>
     <td align="center"><img src="docs/app-switcher.gif" alt="App switcher overlay"/></td>
-    <td align="center"><img src="docs/screenshot-applet.png" alt="Panel applet"/></td>
+    <td align="center"><img src="docs/applet.svg" alt="Panel applet"/></td>
   </tr>
   <tr>
     <td align="center"><em>Super+Tab switcher overlay</em></td>
-    <td align="center"><em>Panel applet — theme &amp; shortcut toggle</em></td>
+    <td align="center"><em>Panel applet: shortcut, theme and scope</em></td>
   </tr>
 </table>
 
