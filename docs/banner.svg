@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 380" width="1200" height="380" role="img" aria-labelledby="t d">
+  <title id="t">cosmic-ext-app-switcher</title>
+  <desc id="d">A horizontal strip of app icons with one selected, labelled with the app's name.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#1b1b1f"/><stop offset="1" stop-color="#0d0d10"/></linearGradient>
+    <radialGradient id="glow" cx="0.5" cy="0.68" r="0.45"><stop offset="0" stop-color="#6a8dff" stop-opacity="0.25"/><stop offset="1" stop-color="#6a8dff" stop-opacity="0"/></radialGradient>
+    <filter id="shadow" x="-20%" y="-40%" width="140%" height="200%"><feDropShadow dx="0" dy="10" stdDeviation="14" flood-color="#000" flood-opacity="0.55"/></filter>
+  </defs>
+  <rect width="1200" height="380" rx="16" fill="url(#bg)"/>
+  <rect width="1200" height="380" rx="16" fill="url(#glow)"/>
+
+  <text x="600" y="86" text-anchor="middle" font-family="'Inter','Segoe UI',Helvetica,Arial,sans-serif" font-size="46" font-weight="700" fill="#f2f2f2">cosmic-ext-app-switcher</text>
+  <text x="600" y="126" text-anchor="middle" font-family="'Inter','Segoe UI',Helvetica,Arial,sans-serif" font-size="21" fill="#a8a8b3">A horizontal Super+Tab switcher for COSMIC</text>
+
+  <rect x="308" y="170" width="584" height="144" rx="18" fill="#212121" fill-opacity="0.92" filter="url(#shadow)"/>
+  <rect x="308.5" y="170.5" width="583" height="143" rx="18" fill="none" stroke="#fff" stroke-opacity="0.08"/>
+  <g transform="translate(342 204)"><rect width="76" height="76" rx="17" fill="#3b82f6"/><rect x="20" y="24" width="36" height="5" rx="2.5" fill="#fff"/><rect x="20" y="36" width="26" height="5" rx="2.5" fill="#fff" opacity=".75"/><rect x="20" y="48" width="31" height="5" rx="2.5" fill="#fff" opacity=".5"/></g>
+  <rect x="440" y="192" width="100" height="100" rx="14" fill="#fff" fill-opacity="0.25"/>
+  <g transform="translate(452 204)"><rect width="76" height="76" rx="17" fill="#f97316"/><circle cx="38" cy="38" r="16" fill="none" stroke="#fff" stroke-width="6"/></g>
+  <g transform="translate(562 204)"><rect width="76" height="76" rx="17" fill="#22c55e"/><path d="M22 39l11 11 21-23" fill="none" stroke="#fff" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/></g>
+  <g transform="translate(672 204)"><rect width="76" height="76" rx="17" fill="#a855f7"/><path d="M28 22l26 16-26 16z" fill="#fff"/></g>
+  <g transform="translate(782 204)"><rect width="76" height="76" rx="17" fill="#ec4899"/><rect x="20" y="22" width="36" height="26" rx="5" fill="none" stroke="#fff" stroke-width="5"/><rect x="28" y="54" width="20" height="5" rx="2.5" fill="#fff"/></g>
+
+  <text x="490" y="352" text-anchor="middle" font-family="'Inter','Segoe UI',Helvetica,Arial,sans-serif" font-size="19" fill="#ebebeb">Files</text>
+</svg>

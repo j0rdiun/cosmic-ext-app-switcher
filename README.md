@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="docs/banner.svg" alt="cosmic-ext-app-switcher: a horizontal Super+Tab app switcher for COSMIC" width="100%"/>
+</p>
+
 # cosmic-ext-app-switcher
 
 A macOS-style horizontal app switcher for the [COSMIC desktop](https://system76.com/cosmic) on Pop!_OS — replacing the default vertical Super+Tab list with a compact icon strip centered on screen.
@@ -5,11 +9,11 @@ A macOS-style horizontal app switcher for the [COSMIC desktop](https://system76.
 <table align="center">
   <tr>
     <td align="center"><img src="docs/app-switcher.gif" alt="App switcher overlay"/></td>
-    <td align="center"><img src="docs/screenshot-applet.png" alt="Panel applet"/></td>
+    <td align="center"><img src="docs/applet.svg" alt="Panel applet"/></td>
   </tr>
   <tr>
     <td align="center"><em>Super+Tab switcher overlay</em></td>
-    <td align="center"><em>Panel applet — theme &amp; shortcut toggle</em></td>
+    <td align="center"><em>Panel applet: shortcut, theme and scope</em></td>
   </tr>
 </table>
 
@@ -27,7 +31,7 @@ curl -fsSL https://raw.githubusercontent.com/j0rdiun/cosmic-ext-app-switcher/mai
 
 ```bash
 # Install dependencies (one-time)
-sudo apt install libxkbcommon-dev
+sudo apt install libxkbcommon-dev libwayland-dev pkg-config
 curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y && source ~/.cargo/env
 
 git clone https://github.com/j0rdiun/cosmic-ext-app-switcher
@@ -121,11 +125,10 @@ One limit: the scope belongs to the switcher that's already open. Holding Alt an
 
 ## Panel applet
 
-> **Tip:** After installing, right-click your COSMIC panel → **Edit Panel** → **Add Applet** → search for **App Switcher Settings** and add it. This gives you a one-click toggle and theme picker directly in your panel.
-
-Add the **App Switcher Settings** applet to your COSMIC panel for quick access to:
-- **Super+Tab shortcut** toggle — enable or disable without touching the terminal
-- **Theme picker** — Dark, Light, Frosted, or Midnight
+After installing, right-click your COSMIC panel → **Edit Panel** → **Add Applet** → search for **App Switcher Settings** and add it. It gives you quick access to:
+- **Super+Tab shortcut** toggle: enable or disable without touching the terminal
+- **Theme picker**: Dark, Light, Frosted, or Midnight
+- **Switch scope**: list all windows, or only the current monitor's
 
 ## Enable / Disable
 
@@ -158,34 +161,44 @@ These are COSMIC-specific or privileged, and a COSMIC update could remove or cha
 ## Project structure
 
 ```
-src/
-  main.rs      # entry point: IPC check, then launch app
-  app.rs       # libcosmic Application: state machine, socket subscription
-  ui.rs        # horizontal icon strip view
-  wayland.rs   # background thread: enumerate toplevels, activate window
-  icons.rs     # app_id → icon name via .desktop file lookup
+src/                 # the switcher binary
+  main.rs            # entry point: flags, IPC check, then launch app
+  app.rs             # libcosmic Application: state machine, socket subscription
+  ui.rs              # horizontal icon strip view
+  wayland.rs         # background thread: enumerate toplevels, activate window, --check-compat
+  icons.rs           # app_id → icon name via .desktop file lookup
+applet/              # panel applet (settings popup) and its desktop, icon and metainfo files
+config/              # switcher-config crate: themes and scope, shared by both binaries
 scripts/
-  find-config.sh   # detects COSMIC shortcuts config path dynamically
-  enable.sh        # writes WindowSwitcher entries to COSMIC config
-  disable.sh       # removes them
-  status.sh        # prints current state
-install.sh     # standalone installer (downloads binary, no Rust needed)
-uninstall.sh   # standalone uninstaller
+  find-config.sh     # detects COSMIC shortcuts config path dynamically
+  shortcut-config.sh # safe edits to the system_actions map, used by enable/disable
+  enable.sh          # writes WindowSwitcher entries to COSMIC config
+  disable.sh         # removes them
+  status.sh          # prints current state
+docs/                # README images
+install.sh           # standalone installer (downloads binaries, no Rust needed)
+uninstall.sh         # standalone uninstaller
 .github/
   workflows/
-    release.yml    # builds x86_64 + aarch64 binaries on tag push
+    release.yml      # builds x86_64 + aarch64 binaries on tag push
 ```
 
 ---
 
 ## Releasing a new version
 
+Three things must agree, or the release workflow refuses to publish:
+
+1. Bump `version` under `[workspace.package]` in the root `Cargo.toml` (both crates inherit it).
+2. Add a matching `<release version="…" date="…">` at the top of `applet/data/io.github.cosmic-ext-applet-app-switcher.metainfo.xml`.
+3. Tag and push:
+
 ```bash
 git tag v0.2.0
 git push origin v0.2.0
 ```
 
-GitHub Actions will build binaries for x86_64 and aarch64 and publish a release automatically.
+GitHub Actions then builds binaries for x86_64 and aarch64 and publishes a release.
 
 ---
 
@@ -194,7 +207,7 @@ GitHub Actions will build binaries for x86_64 and aarch64 and publish a release 
 - Pop!_OS with COSMIC desktop
 - x86_64 or aarch64 architecture
 
-Building from source additionally requires `libxkbcommon-dev` and Rust.
+Building from source additionally requires `libxkbcommon-dev`, `libwayland-dev`, `pkg-config` and Rust.
 
 ---
 
