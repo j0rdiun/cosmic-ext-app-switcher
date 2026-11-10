@@ -218,23 +218,10 @@ fn wayland_thread_main(
         .find(|t| t.is_active)
         .map(|t| t.outputs.clone())
         .unwrap_or_default();
-    // Kept for the future migration this unblocks (see CurrentWorkspace arm below),
-    // but currently unread: legacy workspace_enter/workspace_leave never fire.
-    let _active_workspaces: Vec<ZcosmicWorkspaceHandleV1> = data.toplevels.iter()
-        .find(|t| t.is_active)
-        .map(|t| t.workspaces.clone())
-        .unwrap_or_default();
 
     let in_scope = |t: &Toplevel| -> bool {
         match scope {
             WorkspaceScope::AllWorkspaces => true,
-            WorkspaceScope::CurrentWorkspace => {
-                // Legacy workspace_enter/workspace_leave are never sent by cosmic-comp
-                // (confirmed by reading its server source) — no membership data is
-                // available via this protocol path. No-op until a migration to
-                // ext_foreign_toplevel_list_v1 + ext_workspace_enter/leave lands.
-                true
-            }
             WorkspaceScope::CurrentOutput => {
                 active_outputs.is_empty()
                     || t.outputs.iter().any(|o| active_outputs.contains(o))
