@@ -44,6 +44,12 @@
     <!-- The newest entry here is the version the COSMIC Store displays. Keep it in sync
          with [workspace.package] version in Cargo.toml and the git tag; the release
          workflow refuses to publish when they disagree. -->
+    <release version="0.1.7" date="2026-11-15">
+      <description>
+        <p>New "Hide window title" option in the applet drops the title line under the icons, and the overlay shrinks to match.</p>
+        <p>The applet popup is redesigned into General, Theme and Switch scope sections, with equal-width theme cards and scope options.</p>
+      </description>
+    </release>
     <release version="0.1.6" date="2026-11-08">
       <description>
         <p>New --scope flag (all or current-monitor) overrides the applet's window scope for one shortcut, so Alt+Tab and Super+Tab can list different windows. The README shows the recipe.</p>
