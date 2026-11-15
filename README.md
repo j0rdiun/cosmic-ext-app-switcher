@@ -13,7 +13,7 @@ A macOS-style horizontal app switcher for the [COSMIC desktop](https://system76.
   </tr>
   <tr>
     <td align="center"><em>Super+Tab switcher overlay</em></td>
-    <td align="center"><em>Panel applet: shortcut, theme and scope</em></td>
+    <td align="center"><em>Panel applet: General, Theme and Switch scope</em></td>
   </tr>
 </table>
 
@@ -125,9 +125,9 @@ One limit: the scope belongs to the switcher that's already open. Holding Alt an
 
 ## Panel applet
 
-After installing, right-click your COSMIC panel → **Edit Panel** → **Add Applet** → search for **App Switcher Settings** and add it. It gives you quick access to:
-- **Super+Tab shortcut** toggle: enable or disable without touching the terminal
-- **Theme picker**: Dark, Light, Frosted, or Midnight
+After installing, right-click your COSMIC panel → **Edit Panel** → **Add Applet** → search for **App Switcher Settings** and add it. The popup has three sections:
+- **General**: a **Super+Tab shortcut** toggle (enable or disable without touching the terminal) and a **Hide window title** toggle (drops the title line under the icons, and the overlay shrinks to match)
+- **Theme**: Dark, Light, Frosted, or Midnight
 - **Switch scope**: list all windows, or only the current monitor's
 
 ## Enable / Disable
