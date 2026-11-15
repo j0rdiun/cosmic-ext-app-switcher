@@ -25,13 +25,13 @@ const SURFACE_MARGIN: u32 = 40;
 
 /// A layer surface has to name its pixel size up front and clips anything past it, so the
 /// strip's geometry is worked out here, once, for both the surface and the view.
-pub fn surface_size(window_count: usize) -> (u32, u32) {
+pub fn surface_size(window_count: usize, hide_title: bool) -> (u32, u32) {
     let n = window_count as u32;
     let cell = u32::from(ICON_SIZE) + 2 * u32::from(CELL_PAD);
     let strip_w = n * cell + n.saturating_sub(1) * u32::from(CELL_SPACING)
         + 2 * u32::from(STRIP_PAD_X);
-    let strip_h = cell + u32::from(TITLE_GAP) + u32::from(TITLE_HEIGHT)
-        + 2 * u32::from(STRIP_PAD_Y);
+    let title_h = if hide_title { 0 } else { u32::from(TITLE_GAP) + u32::from(TITLE_HEIGHT) };
+    let strip_h = cell + title_h + 2 * u32::from(STRIP_PAD_Y);
     (strip_w + SURFACE_MARGIN, strip_h + SURFACE_MARGIN)
 }
 
@@ -105,21 +105,20 @@ pub fn view(state: &AppSwitcher) -> Element<'_, Message> {
         })
         .collect();
 
-    let (surface_w, _) = surface_size(state.toplevels.len());
+    let (surface_w, _) = surface_size(state.toplevels.len(), state.hide_title);
     let fg = Color::from_rgba(tv.fg[0], tv.fg[1], tv.fg[2], tv.fg[3]);
     let title = text(fit_title(&selected_label, surface_w))
         .size(TITLE_SIZE)
         .height(TITLE_HEIGHT)
         .class(cosmic::theme::Text::Color(fg));
 
-    let strip = container(
-        column![
-            row(cells).spacing(CELL_SPACING).align_y(Alignment::Center),
-            title,
-        ]
+    let mut content = column![row(cells).spacing(CELL_SPACING).align_y(Alignment::Center)]
         .spacing(TITLE_GAP)
-        .align_x(Alignment::Center)
-    )
+        .align_x(Alignment::Center);
+    if !state.hide_title {
+        content = content.push(title);
+    }
+    let strip = container(content)
     .style(move |_: &cosmic::Theme| ContainerStyle {
         background: Some(Background::Color(bg)),
         border: Border {
@@ -148,7 +147,7 @@ mod tests {
 
     #[test]
     fn long_titles_are_shortened_to_the_strip() {
-        let (surface_w, _) = surface_size(3);
+        let (surface_w, _) = surface_size(3, false);
         let long = "A window title far too long to fit under three icons at all";
         let fitted = fit_title(long, surface_w);
         assert!(fitted.ends_with('…'), "{fitted:?}");
@@ -159,7 +158,9 @@ mod tests {
     /// The surface has to be tall enough for the title, or the layer surface clips it.
     #[test]
     fn surface_leaves_room_for_the_title_row() {
-        let (_, with_title) = surface_size(3);
+        let (_, with_title) = surface_size(3, false);
+        let (_, without) = surface_size(3, true);
+        assert_eq!(with_title - without, u32::from(TITLE_HEIGHT) + u32::from(TITLE_GAP));
         let icons_only = u32::from(ICON_SIZE) + 20 + 28 + 40;
         assert_eq!(with_title, icons_only + u32::from(TITLE_HEIGHT) + u32::from(TITLE_GAP));
     }
@@ -167,8 +168,8 @@ mod tests {
     /// Width still tracks the window count, as the strip grows sideways.
     #[test]
     fn width_grows_with_each_window() {
-        let (one, _) = surface_size(1);
-        let (two, _) = surface_size(2);
+        let (one, _) = surface_size(1, false);
+        let (two, _) = surface_size(2, false);
         assert_eq!(two - one, u32::from(ICON_SIZE) + 20 + 4);
     }
 }

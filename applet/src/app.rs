@@ -5,7 +5,7 @@ use cosmic::{
         window::Id as WindowId,
         widget::container::Style as ContainerStyle,
     },
-    widget::{column, container, mouse_area, row, text},
+    widget::{column, container, mouse_area, row, settings, text},
     Element,
 };
 use cosmic::iced::platform_specific::shell::commands::popup::{destroy_popup, get_popup};
@@ -19,6 +19,7 @@ pub struct AppletApp {
     popup:               Option<WindowId>,
     current_theme:       Theme,
     current_scope:       WorkspaceScope,
+    hide_title:          bool,
     config_handler:      Option<cosmic::cosmic_config::Config>,
     shortcut_configured: bool,
     shortcut_error:      Option<String>,
@@ -30,6 +31,7 @@ pub enum Message {
     PopupClosed(WindowId),
     SetTheme(Theme),
     SetScope(WorkspaceScope),
+    SetHideTitle(bool),
     ToggleShortcut(bool),
 }
 
@@ -196,12 +198,18 @@ impl Application for AppletApp {
             .and_then(|c| c.get::<WorkspaceScope>("workspace_scope").ok())
             .unwrap_or_default();
 
+        let hide_title = config_handler
+            .as_ref()
+            .and_then(|c| c.get::<bool>("hide_title").ok())
+            .unwrap_or_default();
+
         (
             Self {
                 core,
                 popup: None,
                 current_theme,
                 current_scope,
+                hide_title,
                 config_handler,
                 shortcut_configured: shortcut_is_configured(),
                 shortcut_error: None,
@@ -251,6 +259,12 @@ impl Application for AppletApp {
                     let _ = handler.set("workspace_scope", &scope);
                 }
                 self.current_scope = scope;
+            }
+            Message::SetHideTitle(hide) => {
+                if let Some(handler) = &self.config_handler {
+                    let _ = handler.set("hide_title", hide);
+                }
+                self.hide_title = hide;
             }
             Message::ToggleShortcut(enable) => {
                 let result = if enable {
@@ -315,6 +329,7 @@ impl Application for AppletApp {
                     text(label).size(11),
                 ]
                 .spacing(4)
+                .width(Length::Fixed(68.0))
                 .align_x(Alignment::Center);
 
                 mouse_area(card)
@@ -330,7 +345,9 @@ impl Application for AppletApp {
                 let label = s.label().to_string();
 
                 let card = container(text(label).size(12))
-                    .padding([6, 10])
+                    .width(Length::Fill)
+                    .align_x(Alignment::Center)
+                    .padding([8, 10])
                     .style(move |_: &cosmic::Theme| ContainerStyle {
                         border: Border {
                             radius: 6.0.into(),
@@ -350,47 +367,54 @@ impl Application for AppletApp {
 
         let flatpak_note: Option<Element<Message>> = std::env::var("FLATPAK_ID").ok().map(|_| {
             // Nothing of ours runs at `flatpak uninstall`, so a shortcut left registered
-            // keeps Super+Tab pointing at a command that no longer exists — and COSMIC
+            // keeps Super+Tab pointing at a command that no longer exists, and COSMIC
             // does not fall back to its built-in switcher (issue #10).
             text("Flatpak: turn this off before uninstalling, or Super+Tab stays bound to a removed app.")
                 .size(10)
                 .into()
         });
 
-        let shortcut_row = row![
-            text("Super+Tab shortcut").size(14),
-            cosmic::widget::Space::new().width(Length::Fill),
-            cosmic::widget::toggler(self.shortcut_configured)
-                .on_toggle(Message::ToggleShortcut),
-        ]
-        .align_y(Alignment::Center);
+        let general = settings::section()
+            .title("General")
+            .add(settings::item(
+                "Super+Tab shortcut",
+                cosmic::widget::toggler(self.shortcut_configured).on_toggle(Message::ToggleShortcut),
+            ))
+            .add(settings::item(
+                "Hide window title",
+                cosmic::widget::toggler(self.hide_title).on_toggle(Message::SetHideTitle),
+            ))
+            .add_maybe(flatpak_note);
 
-        let mut shortcut_section = column![shortcut_row].spacing(6);
-        if let Some(note) = flatpak_note {
-            shortcut_section = shortcut_section.push(note);
-        }
+        let appearance = settings::section().title("Theme").add(
+            container(row(swatches).spacing(12))
+                .width(Length::Fill)
+                .align_x(Alignment::Center)
+                .padding([8, 0]),
+        );
 
-        let mut content = column![
-            shortcut_section,
-            cosmic::widget::divider::horizontal::default(),
-            text("Theme").size(14),
-            row(swatches).spacing(12),
-            cosmic::widget::divider::horizontal::default(),
-            text("Switch scope").size(14),
-            row(scope_options).spacing(8),
-            // Shown so bug reports can name a version — see the release checklist in
-            // .claude/CLAUDE.md.
-            text(format!("v{}", env!("CARGO_PKG_VERSION"))).size(10),
-        ]
-        .spacing(12)
-        .padding(16)
-        .align_x(Alignment::Center);
+        let scope = settings::section().title("Switch scope").add(
+            container(row(scope_options).spacing(8))
+                .width(Length::Fill)
+                .padding([8, 12]),
+        );
+
+        let mut content = column![general, appearance, scope]
+            .spacing(16)
+            .padding(16)
+            .width(Length::Fixed(360.0));
 
         if let Some(err) = &self.shortcut_error {
-            content = column![content, text(format!("Error: {err}")).size(10)]
-                .spacing(4)
-                .align_x(Alignment::Center);
+            content = content.push(text(format!("Error: {err}")).size(11));
         }
+
+        // Shown so bug reports can name a version (see the release checklist in
+        // .claude/CLAUDE.md).
+        content = content.push(
+            container(text(format!("v{}", env!("CARGO_PKG_VERSION"))).size(10))
+                .width(Length::Fill)
+                .align_x(Alignment::Center),
+        );
 
         self.core.applet.popup_container(content).into()
     }

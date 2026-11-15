@@ -95,7 +95,7 @@ fn main() -> Result<()> {
         return Ok(());
     }
 
-    app::run(toplevels, args.reverse, cmd_tx, theme)
+    app::run(toplevels, args.reverse, cmd_tx, theme, load::<bool>("hide_title"))
 }
 
 #[cfg(test)]

@@ -27,6 +27,7 @@ pub struct AppSwitcher {
     alt_held:      bool,
     surface_id:    WindowId,
     pub theme:     ThemeValues,
+    pub hide_title: bool,
 }
 
 #[derive(Debug, Clone)]
@@ -41,7 +42,7 @@ pub enum Message {
 
 impl Application for AppSwitcher {
     type Executor = cosmic::executor::Default;
-    type Flags    = (Vec<ToplevelEntry>, bool, mpsc::SyncSender<ActivateCommand>, Theme);
+    type Flags    = (Vec<ToplevelEntry>, bool, mpsc::SyncSender<ActivateCommand>, Theme, bool);
     type Message  = Message;
 
     const APP_ID: &'static str = "io.github.cosmic-ext-app-switcher";
@@ -50,7 +51,7 @@ impl Application for AppSwitcher {
     fn core_mut(&mut self) -> &mut Core { &mut self.core }
 
     fn init(core: Core, flags: Self::Flags) -> (Self, Task<Message>) {
-        let (toplevels, reverse, cmd_tx, theme_preset) = flags;
+        let (toplevels, reverse, cmd_tx, theme_preset, hide_title) = flags;
         let n = toplevels.len();
         let selected = if reverse {
             n.saturating_sub(1)
@@ -59,7 +60,7 @@ impl Application for AppSwitcher {
         };
 
         let theme = theme_preset.values();
-        let (surface_w, surface_h) = crate::ui::surface_size(toplevels.len());
+        let (surface_w, surface_h) = crate::ui::surface_size(toplevels.len(), hide_title);
 
         let surface_id = WindowId::unique();
         let layer_task = get_layer_surface::<cosmic::Action<Message>>(SctkLayerSurfaceSettings {
@@ -72,7 +73,7 @@ impl Application for AppSwitcher {
         });
 
         (
-            AppSwitcher { core, toplevels, selected, cmd_tx, super_held: false, alt_held: false, surface_id, theme },
+            AppSwitcher { core, toplevels, selected, cmd_tx, super_held: false, alt_held: false, surface_id, theme, hide_title },
             layer_task,
         )
     }
@@ -191,8 +192,9 @@ pub fn run(
     reverse: bool,
     cmd_tx: mpsc::SyncSender<ActivateCommand>,
     theme: Theme,
+    hide_title: bool,
 ) -> Result<()> {
     let settings = Settings::default().no_main_window(true);
-    cosmic::app::run::<AppSwitcher>(settings, (toplevels, reverse, cmd_tx, theme))
+    cosmic::app::run::<AppSwitcher>(settings, (toplevels, reverse, cmd_tx, theme, hide_title))
         .map_err(|e| anyhow::anyhow!("{e:?}"))
 }
