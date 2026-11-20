@@ -4,7 +4,7 @@
 
 # cosmic-ext-app-switcher
 
-A macOS-style horizontal app switcher for the [COSMIC desktop](https://system76.com/cosmic) on Pop!_OS — replacing the default vertical Super+Tab list with a compact icon strip centered on screen.
+A macOS-style horizontal app switcher for the [COSMIC desktop](https://system76.com/cosmic) on Pop!_OS — replacing the default vertical Super+Tab list with a compact icon strip centered on screen. It can also open the workspace overview with a three-finger swipe.
 
 <table align="center">
   <tr>
@@ -96,6 +96,7 @@ make uninstall
 | Escape | Cancel — return to original window |
 | Click icon | Select |
 | Release click | Activate |
+| Three-finger swipe up / down | Open / close the workspace overview ([opt-in](#three-finger-swipe-for-the-workspace-overview)) |
 
 ---
 
@@ -126,7 +127,7 @@ One limit: the scope belongs to the switcher that's already open. Holding Alt an
 ## Panel applet
 
 After installing, right-click your COSMIC panel → **Edit Panel** → **Add Applet** → search for **App Switcher Settings** and add it. The popup has three sections:
-- **General**: a **Super+Tab shortcut** toggle (enable or disable without touching the terminal) and a **Hide window title** toggle (drops the title line under the icons, and the overlay shrinks to match)
+- **General**: a **Super+Tab shortcut** toggle (enable or disable without touching the terminal), a **Three-finger swipe** toggle (see [below](#three-finger-swipe-for-the-workspace-overview)), and a **Hide window title** toggle (drops the title line under the icons, and the overlay shrinks to match)
 - **Theme**: Dark, Light, Frosted, or Midnight
 - **Switch scope**: list all windows, or only the current monitor's
 
@@ -140,6 +141,35 @@ make disable        # remove — restores COSMIC's default switcher
 make status         # show current state
 make check-compat   # verify COSMIC environment is compatible
 ```
+
+## Three-finger swipe for the workspace overview
+
+COSMIC uses four-finger swipes to switch workspaces and leaves three-finger swipes unused.
+The switcher can bind them: swipe three fingers up to open the workspace overview, and down
+to close it.
+
+Turn it on with the **Three-finger swipe** toggle in the panel applet, or from the terminal:
+
+```bash
+make enable-gestures    # start now, and on every login
+make disable-gestures   # stop, and remove from login
+```
+
+This runs `cosmic-ext-app-switcher --gestures` in the background. cosmic-comp keeps
+three-finger swipes to itself rather than passing them to apps, so the daemon reads the
+touchpad from `/dev/input`, which needs you in the `input` group
+(`sudo usermod -aG input $USER`, then log out and back in). If swipes trigger too easily or
+need too much travel, change `--swipe-distance` (default `0.15`, a fraction of the
+touchpad's height) in `~/.config/autostart/io.github.cosmic-ext-app-switcher-gestures.desktop`. Turning
+gestures off deletes that file, so turning them back on resets the distance.
+
+COSMIC's overview (`cosmic-workspaces`) sometimes crashes with a GPU error
+([cosmic-workspaces-epoch#340](https://github.com/pop-os/cosmic-workspaces-epoch/issues/340)),
+and after a few crashes COSMIC stops restarting it, which also leaves Super+W doing nothing.
+When a swipe up finds it gone, the daemon starts it again, so that swipe takes a moment
+longer. If a swipe still does nothing, stop the background copy with
+`make disable-gestures` and run `cosmic-ext-app-switcher --gestures` in a terminal to see
+what it reports.
 
 ---
 
@@ -163,6 +193,7 @@ These are COSMIC-specific or privileged, and a COSMIC update could remove or cha
 ```
 src/                 # the switcher binary
   main.rs            # entry point: flags, IPC check, then launch app
+  gestures.rs        # --gestures: three-finger swipe daemon for the workspace overview
   app.rs             # libcosmic Application: state machine, socket subscription
   ui.rs              # horizontal icon strip view
   wayland.rs         # background thread: enumerate toplevels, activate window, --check-compat
@@ -206,6 +237,7 @@ GitHub Actions then builds binaries for x86_64 and aarch64 and publishes a relea
 
 - Pop!_OS with COSMIC desktop
 - x86_64 or aarch64 architecture
+- For the three-finger swipe only: membership of the `input` group
 
 Building from source additionally requires `libxkbcommon-dev`, `libwayland-dev`, `pkg-config` and Rust.
 

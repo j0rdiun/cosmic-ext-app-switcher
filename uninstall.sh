@@ -47,6 +47,14 @@ else
     echo "Shortcut not registered — nothing to remove."
 fi
 
+# ── Remove three-finger gesture autostart ─────────────────────────────────────
+GESTURES="$HOME/.config/autostart/io.github.cosmic-ext-app-switcher-gestures.desktop"
+if [ -f "$GESTURES" ]; then
+    rm -f "$GESTURES"
+    echo "Gesture autostart removed: $GESTURES"
+fi
+pkill -f "[c]osmic-ext-app-switcher --gestures" || true
+
 # ── Remove binaries ───────────────────────────────────────────────────────────
 REMOVED=0
 if [ -f "$INSTALL_DIR/$BINARY" ]; then

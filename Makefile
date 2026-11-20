@@ -7,8 +7,11 @@ APPLET_BIN  := target/release/$(APPLET)
 DESKTOP     := applet/data/io.github.cosmic-ext-applet-app-switcher.desktop
 ICON_SRC    := applet/data/io.github.cosmic-ext-applet-app-switcher-symbolic.svg
 ICONS_DIR   := $(HOME)/.local/share/icons/hicolor/scalable/apps
+GESTURES    := $(HOME)/.config/autostart/io.github.cosmic-ext-app-switcher-gestures.desktop
+# The [c] keeps pkill from matching the shell that runs it, whose command line holds the pattern.
+GESTURES_PS := [c]osmic-ext-app-switcher --gestures
 
-.PHONY: all build install uninstall enable disable status check-compat
+.PHONY: all build install uninstall enable disable status check-compat enable-gestures disable-gestures
 
 all: build
 
@@ -33,6 +36,7 @@ install: build
 
 uninstall:
 	@$(MAKE) disable
+	@$(MAKE) disable-gestures
 	@rm -f $(INSTALL_DIR)/$(SWITCHER)
 	@rm -f $(INSTALL_DIR)/$(APPLET)
 	@rm -f $(APPS_DIR)/io.github.cosmic-ext-applet-app-switcher.desktop
@@ -44,6 +48,22 @@ enable:
 
 disable:
 	@bash scripts/disable.sh
+
+enable-gestures:
+	@test -x $(INSTALL_DIR)/$(SWITCHER) || { echo "Run 'make install' first."; exit 1; }
+	@mkdir -p $(dir $(GESTURES))
+	@printf '%s\n' '[Desktop Entry]' 'Type=Application' 'Name=App Switcher Gestures' \
+		'Comment=Three-finger swipe up shows the workspace overview, down hides it' \
+		'Exec=$(INSTALL_DIR)/$(SWITCHER) --gestures' 'NoDisplay=true' > $(GESTURES)
+	@pkill -f '$(GESTURES_PS)' || true
+	@setsid -f $(INSTALL_DIR)/$(SWITCHER) --gestures >/dev/null 2>&1
+	@sleep 0.5; pgrep -f '$(GESTURES_PS)' >/dev/null \
+		&& echo "Gestures on: three-finger swipe up shows the workspace overview, down hides it." \
+		|| { echo "Gesture daemon exited. Run '$(INSTALL_DIR)/$(SWITCHER) --gestures' to see why."; exit 1; }
+
+disable-gestures:
+	@rm -f $(GESTURES)
+	@pkill -f '$(GESTURES_PS)' && echo "Gestures off." || true
 
 status:
 	@bash scripts/status.sh

@@ -19,6 +19,8 @@ make install                 # builds + installs to ~/.local/bin/ + enables shor
 | `make enable` | register in COSMIC shortcuts (live reload) |
 | `make disable` | remove from COSMIC shortcuts, restore default |
 | `make status` | show binary + shortcut state |
+| `make enable-gestures` | XDG autostart + start the `--gestures` daemon |
+| `make disable-gestures` | remove the autostart entry, stop the daemon |
 
 ## Architecture
 
@@ -39,6 +41,29 @@ make install                 # builds + installs to ~/.local/bin/ + enables shor
 - cosmic-comp intercepts all Super+key combos before our exclusive surface sees them — Tab keypresses never arrive via keyboard events; IPC socket is the only cycling mechanism
 - Use `cosmic::iced::Subscription`, `cosmic::iced::futures`, `cosmic::iced::stream` — not `iced_futures` directly
 - Socket subscription sender type: `cosmic::iced::futures::channel::mpsc::Sender<Message>`
+
+## Three-finger gestures (`src/gestures.rs`)
+
+cosmic-comp (`src/input/mod.rs`, `GestureSwipeBegin`) claims every swipe of 3+ fingers into
+its own `GestureState` and only acts on 4 (`3 => None, // TODO: 3 finger gestures`), so
+three-finger swipes never reach Wayland clients. The daemon reads the touchpad's evdev node
+directly (stdlib only: raw 24-byte `input_event`s, `BTN_TOOL_TRIPLETAP` + `ABS_X/ABS_Y`,
+`EVIOCGABS` for the pad height) and needs the user in the `input` group. It drives the overview
+through cosmic-workspaces' D-Bus methods, `busctl --user call com.system76.CosmicWorkspaces
+/com/system76/CosmicWorkspaces com.system76.CosmicWorkspaces Show|Hide`, rather than spawning
+`cosmic-workspaces` (that only toggles). cosmic-workspaces crashes with a wgpu
+"Surface does not support the adapter's queue family" panic (pop-os/cosmic-workspaces-epoch#340,
+seen on a single Intel Meteor Lake GPU too) and cosmic-session gives up restarting it, leaving
+the bus name unowned (`busctl` says "The name is not activatable"). So a failed `Show` makes the
+daemon `setsid -f cosmic-workspaces` itself and retry: a fresh instance is on the bus in ~200 ms
+and starts hidden. If upstream ever implements 3-finger swipes
+(pop-os/cosmic-comp#1799 uses 4, #396 makes them configurable), the two would both fire.
+
+On/off state is the XDG autostart file
+`~/.config/autostart/io.github.cosmic-ext-app-switcher-gestures.desktop`. Both the Makefile
+targets and the applet's "Three-finger swipe" toggle (`do_enable_gestures` in
+`applet/src/app.rs`) write it: keep the two in sync. The applet starts the daemon with
+`setsid -f`, checks `pgrep` 500 ms later, and turns the toggle back off if it died.
 
 ## Shortcut config
 

@@ -13,3 +13,4 @@ libcosmic = { git = "https://github.com/pop-os/libcosmic", rev = "417923f", defa
     "tokio",
 ] }
 switcher-config = { path = "../config" }
+tokio = { version = "1", features = ["time"] }
