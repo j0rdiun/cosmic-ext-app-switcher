@@ -1,4 +1,5 @@
 mod app;
+mod gestures;
 mod icons;
 mod ui;
 mod wayland;
@@ -28,6 +29,14 @@ pub struct Args {
     /// Report whether the compositor offers the Wayland interfaces the switcher needs, then exit
     #[arg(long, default_value_t = false)]
     pub check_compat: bool,
+
+    /// Stay running: three-finger swipe up shows the workspace overview, swipe down hides it
+    #[arg(long, default_value_t = false)]
+    pub gestures: bool,
+
+    /// With --gestures, how far three fingers must travel, as a fraction of the touchpad's height
+    #[arg(long, default_value_t = 0.15)]
+    pub swipe_distance: f32,
 }
 
 /// The scopes offered on the command line, named for what users see.
@@ -74,6 +83,9 @@ fn main() -> Result<()> {
 
     if args.check_compat {
         return check_compat();
+    }
+    if args.gestures {
+        return gestures::run(args.swipe_distance);
     }
 
     // If a switcher is already running, signal it to cycle and exit.

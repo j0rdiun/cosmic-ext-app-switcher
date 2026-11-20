@@ -22,7 +22,8 @@ pub struct AppletApp {
     hide_title:          bool,
     config_handler:      Option<cosmic::cosmic_config::Config>,
     shortcut_configured: bool,
-    shortcut_error:      Option<String>,
+    gestures_enabled:    bool,
+    error:               Option<String>,
 }
 
 #[derive(Debug, Clone)]
@@ -33,20 +34,25 @@ pub enum Message {
     SetScope(WorkspaceScope),
     SetHideTitle(bool),
     ToggleShortcut(bool),
+    ToggleGestures(bool),
+    /// Half a second after starting the gesture daemon: whether it is still running.
+    GesturesChecked(bool),
 }
 
 // ---------------------------------------------------------------------------
 // Shortcut helpers
 // ---------------------------------------------------------------------------
 
-fn shortcuts_config_path() -> Option<std::path::PathBuf> {
-    let config_home = std::env::var("XDG_CONFIG_HOME")
+fn config_home() -> std::path::PathBuf {
+    std::env::var("XDG_CONFIG_HOME")
         .map(std::path::PathBuf::from)
         .unwrap_or_else(|_| {
             std::path::PathBuf::from(std::env::var("HOME").unwrap_or_default()).join(".config")
-        });
+        })
+}
 
-    let shortcuts_dir = config_home
+fn shortcuts_config_path() -> Option<std::path::PathBuf> {
+    let shortcuts_dir = config_home()
         .join("cosmic")
         .join("com.system76.CosmicSettings.Shortcuts");
 
@@ -174,6 +180,66 @@ fn do_register_shortcut() -> Result<(), String> {
 }
 
 // ---------------------------------------------------------------------------
+// Three-finger gesture helpers
+// ---------------------------------------------------------------------------
+//
+// An XDG autostart entry runs `cosmic-ext-app-switcher --gestures` at login, and its
+// presence is the on/off state. `make enable-gestures` writes the same file.
+
+/// The `[c]` keeps pkill/pgrep from matching a shell whose command line holds the pattern.
+const GESTURES_PS: &str = "[c]osmic-ext-app-switcher --gestures";
+
+fn gestures_autostart_path() -> std::path::PathBuf {
+    config_home().join("autostart/io.github.cosmic-ext-app-switcher-gestures.desktop")
+}
+
+fn gestures_running() -> bool {
+    std::process::Command::new("pgrep")
+        .args(["-f", GESTURES_PS])
+        .stdout(std::process::Stdio::null())
+        .status()
+        .is_ok_and(|s| s.success())
+}
+
+fn stop_gestures() {
+    let _ = std::process::Command::new("pkill").args(["-f", GESTURES_PS]).status();
+}
+
+fn do_disable_gestures() -> Result<(), String> {
+    stop_gestures();
+    match std::fs::remove_file(gestures_autostart_path()) {
+        Err(e) if e.kind() != std::io::ErrorKind::NotFound => Err(e.to_string()),
+        _ => Ok(()),
+    }
+}
+
+fn do_enable_gestures() -> Result<(), String> {
+    let path = gestures_autostart_path();
+    std::fs::create_dir_all(path.parent().unwrap()).map_err(|e| e.to_string())?;
+    let bin = switcher_exec();
+    std::fs::write(
+        &path,
+        format!(
+            "[Desktop Entry]\nType=Application\nName=App Switcher Gestures\n\
+             Comment=Three-finger swipe up shows the workspace overview, down hides it\n\
+             Exec={bin} --gestures\nNoDisplay=true\n"
+        ),
+    )
+    .map_err(|e| e.to_string())?;
+
+    // Start it now too, rather than at next login. setsid -f detaches it from the applet.
+    stop_gestures();
+    std::process::Command::new("setsid")
+        .args(["-f", &bin, "--gestures"])
+        .stdin(std::process::Stdio::null())
+        .stdout(std::process::Stdio::null())
+        .stderr(std::process::Stdio::null())
+        .status()
+        .map_err(|e| format!("could not start the gesture daemon: {e}"))?;
+    Ok(())
+}
+
+// ---------------------------------------------------------------------------
 // Application impl
 // ---------------------------------------------------------------------------
 
@@ -212,7 +278,8 @@ impl Application for AppletApp {
                 hide_title,
                 config_handler,
                 shortcut_configured: shortcut_is_configured(),
-                shortcut_error: None,
+                gestures_enabled: gestures_autostart_path().exists(),
+                error: None,
             },
             Task::none(),
         )
@@ -275,9 +342,37 @@ impl Application for AppletApp {
                 match result {
                     Ok(()) => {
                         self.shortcut_configured = enable;
-                        self.shortcut_error = None;
+                        self.error = None;
                     }
-                    Err(e) => self.shortcut_error = Some(e),
+                    Err(e) => self.error = Some(e),
+                }
+            }
+            Message::ToggleGestures(enable) => {
+                let result = if enable { do_enable_gestures() } else { do_disable_gestures() };
+                if let Err(e) = result {
+                    self.error = Some(e);
+                    return Task::none();
+                }
+                self.gestures_enabled = enable;
+                self.error = None;
+                if enable {
+                    // The daemon exits at once when it can't read the touchpad (most often:
+                    // the user isn't in the `input` group), so look again shortly after.
+                    return cosmic::task::future(async {
+                        tokio::time::sleep(std::time::Duration::from_millis(500)).await;
+                        Message::GesturesChecked(gestures_running())
+                    });
+                }
+            }
+            Message::GesturesChecked(running) => {
+                if !running && self.gestures_enabled {
+                    let _ = do_disable_gestures();
+                    self.gestures_enabled = false;
+                    self.error = Some(
+                        "Gestures stopped at once. Run `cosmic-ext-app-switcher --gestures` \
+                         in a terminal to see why."
+                            .to_string(),
+                    );
                 }
             }
         }
@@ -380,6 +475,14 @@ impl Application for AppletApp {
                 "Super+Tab shortcut",
                 cosmic::widget::toggler(self.shortcut_configured).on_toggle(Message::ToggleShortcut),
             ))
+            .add(
+                settings::item::builder("Three-finger swipe")
+                    .description("Up opens the overview, down closes it")
+                    .control(
+                        cosmic::widget::toggler(self.gestures_enabled)
+                            .on_toggle(Message::ToggleGestures),
+                    ),
+            )
             .add(settings::item(
                 "Hide window title",
                 cosmic::widget::toggler(self.hide_title).on_toggle(Message::SetHideTitle),
@@ -404,7 +507,7 @@ impl Application for AppletApp {
             .padding(16)
             .width(Length::Fixed(360.0));
 
-        if let Some(err) = &self.shortcut_error {
+        if let Some(err) = &self.error {
             content = content.push(text(format!("Error: {err}")).size(11));
         }
 

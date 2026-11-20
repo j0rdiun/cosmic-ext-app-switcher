@@ -1059,6 +1059,7 @@ version = "0.1.7"
 dependencies = [
  "libcosmic",
  "switcher-config",
+ "tokio",
 ]
 
 [[package]]
